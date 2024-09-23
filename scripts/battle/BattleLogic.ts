@@ -20,6 +20,8 @@ export class BattleLogic {
         if (BattleLogic.$ins)
             throw "error";
         BattleLogic.$ins = this;
+
+        
     }
 
     init() {
