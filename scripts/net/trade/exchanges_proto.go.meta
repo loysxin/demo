@@ -1,0 +1,12 @@
+{
+  "ver": "1.0.1",
+  "importer": "*",
+  "imported": true,
+  "uuid": "0b9471cf-bd7b-4a14-b175-39be404725b2",
+  "files": [
+    ".go",
+    ".json"
+  ],
+  "subMetas": {},
+  "userData": {}
+}
