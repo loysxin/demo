@@ -109,7 +109,6 @@ export class LootRoleInfoPanel extends Panel {
     }
 
     private onClickLoot() {
-
         let callBack = () => {
             HomeUI.Hide();
             if (!BattleReadyLogic.ins)

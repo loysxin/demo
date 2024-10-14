@@ -9,6 +9,7 @@ import { OpenBoxPage } from "./OpenBoxPage";
 import { EventMgr, Evt_GetReward, Evt_Item_Change, Evt_OpenBoxGetRewardPanel } from "../../manager/EventMgr";
 import { Tips } from "../login/Tips";
 import { ItemUtil } from "../../utils/ItemUtils";
+import { fanyuTips } from "../fanyu/fanyuTips";
 
 export class OpenBoxPanel extends Panel {
     protected prefab: string = "prefabs/panel/bag/OpenBoxPanel";
@@ -270,6 +271,17 @@ export class OpenBoxPanel extends Panel {
             Tips.Show("请选择道具")
             return;
         }
+        if(this.curSelectCount >= 2 && this.BoxData.Text && this.BoxData.Text != ""){
+            let id = this.BoxData.Items[this.selectItem[0]]
+            let lbl = CfgMgr.GetRewardRoleById(id).RoleName
+            let str = CfgMgr.GetText(this.BoxData.Text, {name: lbl})
+            Tips.Show(str, this.callBack.bind(this))
+        }else{
+            this.callBack();
+        }
+    }
+
+    private callBack(){
         if (this.BoxData.Boxtype == BoxType.random) {
             let data = {
                 type: MsgTypeSend.OpenBoxRequest,

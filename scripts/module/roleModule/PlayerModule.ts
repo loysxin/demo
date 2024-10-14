@@ -11,7 +11,8 @@ import { GameSet } from "../GameSet";
 import { HomeUI } from "../home/panel/HomeUI";
 import { RoleTuPoPanel } from "../role/RoleTuPoPanel";
 import { RoleTuPoResultPanel } from "../role/RoleTuPoResultPanel";
-import PlayerData, { SPlayerDataRole, SPlayerDataSkill } from "./PlayerData";
+import { UserInfoPanel } from "../userInfo/UserInfoPanel";
+import PlayerData, { SPlayerDataRole, SPlayerDataSkill, SPlayerViewInfo } from "./PlayerData";
 
 export class PlayerModule {
     private tick = 0;
@@ -21,6 +22,7 @@ export class PlayerModule {
         Session.on(MsgTypeRet.UpgradeRoleRet, this.onUpgradeRoleRet, this);
         Session.on(MsgTypeRet.SetConfigDataRet, this.onUpdateRoleCfg, this);
         Session.on(MsgTypeRet.UpgradePassiveSkillRet, this.onUpgradePassiveSkill, this);
+        Session.on(MsgTypeRet.GetPlayerViewInfoRet, this.onGetPlayerViewInfoRet, this);
 
         GameSet.RegisterUpdate(this.update, this);
     }
@@ -60,6 +62,11 @@ export class PlayerModule {
     private onUpgradePassiveSkill(data: { role: SPlayerDataRole }): void {
         PlayerData.AddRole(data.role);
         EventMgr.emit(Evt_Passive_Skill_Update, data.role.id);
+    }
+    private onGetPlayerViewInfoRet(data: {code: number, player_view_info:SPlayerViewInfo}):void{
+        if(data.code == 0){
+            UserInfoPanel.Show(data.player_view_info);
+        }
     }
     private update(dt: number) {
         this.tick += dt;

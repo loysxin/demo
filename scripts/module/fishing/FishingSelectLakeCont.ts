@@ -14,6 +14,7 @@ import { ResMgr } from "../../manager/ResMgr";
 
 export class FishingSelectLakeCont extends FishingContBase {
     private tipsCont:Node;
+    private bottomBg:Sprite;
     private tipsLab:RichText;
     private lakeList:AutoScroller;
     private loakCont:Node;
@@ -22,15 +23,16 @@ export class FishingSelectLakeCont extends FishingContBase {
     private downBtnLab:Label;
     private downBtnArrow:Node;
     private btn:Button;
-    private btnRod:Sprite;
     private btnLab:Label;
     private lakeDatas:{data:StdLake, isSelect:boolean}[];
     private curSelectIndex:number;
     private curSelectBtnIndex:number;
-    private curIcedLake:number;
+    private curIcedLake:number[];
     protected onLoad(): void {
         
         this.tipsCont = this.node.getChildByPath("tipsCont");
+        
+        this.bottomBg = this.node.getChildByName("bottomBg").getComponent(Sprite);
         this.tipsLab = this.node.getChildByPath("tipsCont/tipsLab").getComponent(RichText);
         this.lakeList = this.node.getChildByPath("lakeList").getComponent(AutoScroller);
         this.loakCont = this.node.getChildByPath("lakeList/view/content");
@@ -39,7 +41,6 @@ export class FishingSelectLakeCont extends FishingContBase {
         this.downBtnLab = this.node.getChildByPath("downBtn/downBtnLab").getComponent(Label);
         this.downBtnArrow = this.node.getChildByPath("downBtn/arrow");
         this.btn = this.node.getChildByName("btn").getComponent(Button);
-        this.btnRod = this.node.getChildByPath("btn/btnRod").getComponent(Sprite);
         this.btnLab = this.node.getChildByPath("btn/btnLab").getComponent(Label);
         this.downCont = this.node.getChildByName("downCont");
         this.downBtn.node.on(Button.EventType.CLICK, this.onBtnClick, this);
@@ -63,12 +64,11 @@ export class FishingSelectLakeCont extends FishingContBase {
         EventMgr.on(Evt_FishDataUpdate, this.onFishDataUpdate, this);
     }
     onShow(state: number): void {
-        this.curIcedLake = 0;
+        this.curIcedLake = [];
         this.downBtnArrow.angle = 0;
         this.stopIcedEffect();
         super.onShow(state);
-
-
+        
     }
     onHide(): void {
         super.onHide();
@@ -140,12 +140,18 @@ export class FishingSelectLakeCont extends FishingContBase {
     }
     
     protected updateCont(): void {
+        let bottomUrl:string = "generalBottomBg";
+        if(PlayerData.CurFishRoundInfo && PlayerData.CurFishRoundInfo.kill_type > 1){
+            bottomUrl = "hellBottomBg";
+        }
+        bottomUrl = path.join("sheets/fishing", bottomUrl, "spriteFrame");
+        ResMgr.LoadResAbSub(bottomUrl, SpriteFrame, res => {
+            this.bottomBg.spriteFrame = res;
+        });
         let selectId:number = -1;
         this.tipsCont.active = false;
-        this.btnRod.node.active = false;
         let tipsStr:string = "";
         let btnStr:string = "开始";
-        let btnLabPos:Vec3 = new Vec3(30, 4, 0);
         switch(this.curRoundState){
             case FishRoundState.Select:
                 selectId = PlayerData.fishData.player.lake_id;
@@ -162,39 +168,22 @@ export class FishingSelectLakeCont extends FishingContBase {
                     let std = CfgMgr.GetStdLake(selectId);
                     tipsStr = `已选择垂钓区域\n${std.Lakesname}`;
                 }
-                let rodType:number = PlayerData.FishRodType + 1;
-                let iconName:string = `fish_rod_${rodType}`;
-                if(!this.btnRod.spriteFrame || this.btnRod.spriteFrame.name != iconName){
-                    let url = path.join("sheets/fishing/", iconName, "spriteFrame");
-                    ResMgr.LoadResAbSub(url, SpriteFrame, res => {
-                        this.btnRod.node.active = true;
-                        this.btnRod.spriteFrame = res;
-                    });
-                }else{
-                    this.btnRod.node.active = true;
-                }
-                let icedLakeId:number = PlayerData.FishIcedLakeId;
-                let isNew:boolean = this.curIcedLake == 0;
-                this.curIcedLake = icedLakeId;
+                this.curIcedLake = PlayerData.FishIcedLakeIds;
                 
                 break;
             case FishRoundState.NoSelect:
                 tipsStr = "请选择垂钓区域";  
                 this.tipsCont.active = true;
-                btnLabPos.x = 0;
                 //this.btnRod.active = true;
                 break;
             case FishRoundState.NoFishing:
                 tipsStr = "您未垂钓\n请等待下个回合";  
                 this.tipsCont.active = true;
-                btnLabPos.x = 0;
                 break;
             case FishRoundState.No:
                 btnStr = "未开启";
-                btnLabPos.x = 0;
                 break;
         }
-        this.btnLab.node.position = btnLabPos;
         this.btnLab.string = btnStr;
         this.curSelectIndex = -1;
         this.lakeDatas = [];
@@ -221,17 +210,27 @@ export class FishingSelectLakeCont extends FishingContBase {
         let lakeNode:Node;
         let lakeCom:FishingLakeItem;
         let lakeName:string = "";
+        let tipsStr:string = "";
+        let checkIndex:number = 0;
         for(let index = 0; index < this.loakCont.children.length; index++){
             lakeNode = this.loakCont.children[index];
             lakeCom = lakeNode.getComponent(FishingLakeItem);
-            if(lakeCom && lakeCom.lakeData && lakeCom.lakeData.LakesId == this.curIcedLake){
-                lakeName = lakeCom.lakeData.Lakesname;
-                this.UpdateIcedTips(`${lakeName}结冰了`);
+            if(lakeCom && lakeCom.lakeData && this.curIcedLake.indexOf(lakeCom.lakeData.LakesId) > -1){
                 lakeCom.PlayIcedEffect();
-                break;
+                if(checkIndex < 2){
+                    if(lakeName != "")lakeName += "、";
+                    lakeName += lakeCom.lakeData.Lakesname;
+                }
+                
+                checkIndex++;
+                //break;
             }
         }
-        
+        if(checkIndex > 1){
+            this.UpdateIcedTips(`${lakeName}等，结冰了`);
+        }else{
+            this.UpdateIcedTips(`${lakeName}结冰了`);
+        }
     }
     private stopIcedEffect():void{
         let lakeNode:Node;

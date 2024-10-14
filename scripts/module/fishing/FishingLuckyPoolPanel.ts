@@ -113,7 +113,7 @@ export class FishingLuckyPoolPanel extends Panel {
             let rankCondList:number[] = CfgMgr.GetFishCommon.RankScoreUpdateLimit;
             let set:number = CfgMgr.GetFishConvertNum(CfgMgr.GetFishCommon.CostItemID);
             this.poolNumLab.string = formatNumber(this.data.rank_reward_pool/set , 2);
-            this.superTipsLab.string = `<outline outlineColor=#FFFFFF width=3>排名前${cfg[0]*100}%<color=#ff0000>（共${this.data.cost_rank.rank_size}）</color>名的玩家可获得奖励</outline>`;
+            this.superTipsLab.string = `<outline outlineColor=#FFFFFF width=3>排名前${cfg[0]*100}%的玩家可获得奖励</outline>`;
             this.superRankAwardItem.SetData(ItemUtil.CreateThing(ThingType.ThingTypeCurrency, 0, this.data.cost_rank.reward_pool/set));
             this.superRankCondNumLab.string = rankCondList[0].toString();
             this.superRankCondLab.string = `${this.data.cost_rank.rank_size}名`;
@@ -123,7 +123,7 @@ export class FishingLuckyPoolPanel extends Panel {
                 this.superMyRankLab.string = "未上榜";
             }
 
-            this.noneRodTipsLab.string = `<outline outlineColor=#FFFFFF width=3>排名前${cfg[1]*100}%<color=#ff0000>（共${this.data.lose_cost_rank.rank_size}）</color>名的玩家可获得奖励</outline>`;
+            this.noneRodTipsLab.string = `<outline outlineColor=#FFFFFF width=3>排名前${cfg[1]*100}%的玩家可获得奖励</outline>`;
             this.noneRodRankAwardItem.SetData(ItemUtil.CreateThing(ThingType.ThingTypeCurrency, 0, this.data.lose_cost_rank.reward_pool/set));
             this.noneRodRankCondNumLab.string = rankCondList[1].toString();
             this.noneRodRankCondLab.string = `${this.data.lose_cost_rank.rank_size}名`;

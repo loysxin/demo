@@ -42,6 +42,7 @@ export class SortPanel extends Panel {
     private topTitle: Label = null;
     private topTitle2: Label = null;
     private deleteBtn: Node = null;
+    private SortQArgs:SQueryArgs = {};
 
     private sortDataList: serchMsg[] = []
     private itemDataList: serchMsg[] = []
@@ -191,8 +192,9 @@ export class SortPanel extends Panel {
 
     }
 
-    async flush(type) {
+    async flush(type, QArgs) {
         this.type = type;
+        this.SortQArgs = QArgs;
         if (!this.isInit) {
             this.initData();
             this.isInit = true;
@@ -237,24 +239,28 @@ export class SortPanel extends Panel {
             QArgs.sort_type = SQuerySortType.OpenTime;
             QArgs.reverse = true;
         }
-        //筛选
+        // //筛选
         let ids = []
-        if (this.type == 1 && this.roleDataList.length > 0) {
-            type = SQueryType.RoleType;
-            this.roleDataList.forEach((datas) => {
-                datas.forEach((data) => {
-                    ids.push(data.id);
-                })
-            })
-            QArgs.role_selection = ids;
-        } else if (this.itemDataList.length > 0) {//筛选道具
+        if(this.SortQArgs.item_selection && this.SortQArgs.item_selection.length > 0){
             type = SQueryType.ItemType;
-            this.itemDataList.forEach((data) => {
-                ids.push(data.id);
-            })
+            ids = this.SortQArgs.item_selection
             QArgs.item_selection = ids;
         }
-
+        // if (this.type == 1 && this.roleDataList.length > 0) {
+        //     type = SQueryType.RoleType;
+        //     this.roleDataList.forEach((datas) => {
+        //         datas.forEach((data) => {
+        //             ids.push(data.id);
+        //         })
+        //     })
+        //     QArgs.role_selection = ids;
+        // } else if (this.itemDataList.length > 0) {//筛选道具
+        //     type = SQueryType.ItemType;
+        //     this.itemDataList.forEach((data) => {
+        //         ids.push(data.id);
+        //     })
+           
+        // }
         if (ids.length > 0 || this.sortDataList.length > 0) {//筛选或者排序有已选项，发送查询协议
             console.log(`发送协议查询！`, QArgs);
             TradePanel.ins.SendSortOrSerch(1, type, QArgs);

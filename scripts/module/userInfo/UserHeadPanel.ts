@@ -1,15 +1,10 @@
 import { Button, Label, Sprite, Toggle, Node, path, SpriteFrame } from "cc";
 import { Panel } from "../../GameRoot";
-import PlayerData, { SPlayerData } from "../roleModule/PlayerData";
-import LocalStorage from "../../utils/LocalStorage";
-import { MsgPanel } from "../common/MsgPanel";
-import { UserEditInfoPanel } from "./UserEditInfoPanel";
-import { EventMgr, Evt_UserDataChange } from "../../manager/EventMgr";
-import { CopyToClip } from "../../Platform";
+import PlayerData from "../roleModule/PlayerData";
 import { AutoScroller } from "../../utils/AutoScroller";
 import { UserHeadItem } from "./UserHeadItem";
 import { CfgMgr, StdHead, StdHeadType } from "../../manager/CfgMgr";
-import { folder_head, folder_head_round, folder_icon, ResMgr } from "../../manager/ResMgr";
+import { folder_head, folder_head_round, ResMgr } from "../../manager/ResMgr";
 import { DateUtils } from "../../utils/DateUtils";
 import { AttrSub, FormatAttr } from "../common/BaseUI";
 enum HeadabType {

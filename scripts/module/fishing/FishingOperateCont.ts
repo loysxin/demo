@@ -1,4 +1,4 @@
-import { Button, Component, Label, Node, Rect, RichText, sp, Tween, tween, UITransform, Vec3 } from "cc";
+import { Button, Component, Label, Node, path, Rect, RichText, sp, Sprite, SpriteFrame, Tween, tween, UITransform, Vec3 } from "cc";
 import { FishingContBase } from "./FishingContBase";
 import PlayerData, { SFishingRoundInfo } from "../roleModule/PlayerData";
 import { Session } from "../../net/Session";
@@ -7,8 +7,10 @@ import { CfgMgr } from "../../manager/CfgMgr";
 import { randomf } from "../../utils/Utils";
 import { SetNodeGray } from "../common/BaseUI";
 import { AudioMgr, FishSoundId, FishSoundInfo } from "../../manager/AudioMgr";
+import { ResMgr } from "../../manager/ResMgr";
 
 export class FishingOperateCont extends FishingContBase {
+    private bottomBg:Sprite;
     private timeLab:Label;
     private tipsLab:RichText;
     private btn:Button;
@@ -21,6 +23,7 @@ export class FishingOperateCont extends FishingContBase {
     private barTrans:UITransform;
     private isClick:boolean = false;
     protected onLoad(): void {
+        this.bottomBg = this.node.getChildByName("bottomBg").getComponent(Sprite);
         this.tipsLab = this.node.getChildByPath("tipsCont/tipsLab").getComponent(RichText);
         this.timeLab = this.node.getChildByName("timeLab").getComponent(Label);
         this.fishBody = this.node.getChildByPath("topCont/fishBody").getComponent(sp.Skeleton);
@@ -72,6 +75,14 @@ export class FishingOperateCont extends FishingContBase {
     protected updateCont(): void {
         SetNodeGray(this.btn.node, true, true);
         SetNodeGray(this.bar, true, true);
+        let bottomUrl:string = "generalBottomBg";
+        if(PlayerData.CurFishRoundInfo && PlayerData.CurFishRoundInfo.kill_type > 1){
+            bottomUrl = "hellBottomBg";
+        }
+        bottomUrl = path.join("sheets/fishing", bottomUrl, "spriteFrame");
+        ResMgr.LoadResAbSub(bottomUrl, SpriteFrame, res => {
+            this.bottomBg.spriteFrame = res;
+        });
         let curRoundInfo:SFishingRoundInfo = PlayerData.CurFishRoundInfo;
         if(!curRoundInfo) return;
         if(PlayerData.fishData && PlayerData.fishData.player && PlayerData.fishData.player.is_hit){

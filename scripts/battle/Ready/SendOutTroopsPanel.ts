@@ -42,7 +42,6 @@ export class SendOutTroopsPanel extends Panel {
     }
 
     protected override onShow(...arg: any[]): void {
-        BattleReadyLogic.ins.isInitLineup = false;
         this.hero2Soldier = BattleReadyLogic.ins.GetSoldiers();
         this.maxSoldier = Array.from(this.hero2Soldier.values()).reduce((accumulator, currentValue) => accumulator + currentValue, 0);
 

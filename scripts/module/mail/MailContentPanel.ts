@@ -25,6 +25,10 @@ export class MailContentPanel extends Panel {
     protected mailInfo: SPlayerMailData;
     protected delete_time: Label;
     private time_lock:number;
+    private is_begin:boolean = false;
+    private time_differ:number;
+    private deleteTime:number;
+
 
     protected onLoad() {
         this.CloseBy("mask");
@@ -103,60 +107,50 @@ export class MailContentPanel extends Panel {
         this.time.string = `收件时间：${formatDate(data.time * 1000, 'yyyy-MM-dd hh:mm:ss')}`;
         this.desc.string = data.content;
         this.sender.string = `发件人：${data.sender_player_name || `系统邮件`}`;
-        let time_differ = PlayerData.GetServerTime() - data.time;
-        let deleteTime:number
+        this.time_differ = PlayerData.GetServerTime() - data.time;
         if (data.attachments && data.attachments.data && data.attachments.data.length) {
             let reward_data = PlayerData.getMailReward(data.attachments.data);
             this.scroller.UpdateDatas(reward_data);
             if (data.is_attachment_claimed) {
                 this.getBtn.active = false;
-                deleteTime = CfgMgr.GetCommon(StdCommonType.Mail).DeleteTime2
+                this.deleteTime = CfgMgr.GetCommon(StdCommonType.Mail).DeleteTime2
             } else {
                 this.getBtn.active = true;
-                deleteTime = CfgMgr.GetCommon(StdCommonType.Mail).DeleteTime1
+                this.deleteTime = CfgMgr.GetCommon(StdCommonType.Mail).DeleteTime1
             }
         } else {
             this.scroller.UpdateDatas([]);
             this.getBtn.active = false;
-            deleteTime = CfgMgr.GetCommon(StdCommonType.Mail).DeleteTime2
+            this.deleteTime = CfgMgr.GetCommon(StdCommonType.Mail).DeleteTime2
         }
        
-        if(time_differ > deleteTime){
+        if(this.time_differ > this.deleteTime){
             this.delete_time.string = "";
+            this.is_begin = false;
         }else{
-            //最大时间 - 已过时间 = 剩余时间
-            this.setTimeLabel(this.delete_time, deleteTime, time_differ)
+            this.is_begin = true;
         }
     }
 
-    private setTimeLabel(lbl:Label, max_time:number,  pass_time:number){
-        let seconds = max_time - pass_time + PlayerData.GetServerTime();
-        seconds = Math.floor(seconds)
-        let show_time = countDown2(seconds);
-        if( show_time.d > 0){
-            lbl.string = "剩余" + show_time.d + "天";
-        }else{
-            lbl.string = "剩余" + show_time.h + ":" + show_time.m + ":" + show_time.s;
-        }
-        if(this.time_lock){
-            clearInterval(this.time_lock)
-        }
-        if(this.time_lock){
-            clearInterval(this.time_lock)
-        }
-        this.time_lock = setInterval(() => {
+    protected update(dt: number): void {
+        if(this.is_begin){
+            let time_differ = PlayerData.GetServerTime() - this.mailInfo.time
+            let seconds = this.deleteTime - time_differ + PlayerData.GetServerTime();
+            seconds = Math.floor(seconds)
             if (seconds > 0) {
-                seconds -= 1;
                 let time = countDown2(seconds);
                 if(time.d > 0){
-                    lbl.string = "剩余" + time.d + "天";
+                    this.delete_time.string = "剩余" + time.d + "天";
+                    this.is_begin = false;
                 }else{
-                    lbl.string = "剩余" + time.h + ":" + time.m + ":" + time.s;
+                    this.delete_time.string = "剩余" + time.h + ":" + time.m + ":" + time.s;
+                    this.is_begin = true;
                 }
             } else {
-                clearInterval(this.time_lock);
+                this.delete_time.string = "";
+                this.is_begin = false;
             }
-        }, 1000)
+        }
     }
 
     protected onHide(...args: any[]): void {

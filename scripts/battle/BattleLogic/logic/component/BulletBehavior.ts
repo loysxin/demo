@@ -2,7 +2,6 @@ import { ActorType, AttackInfo, one_frame_time } from "../../Def";
 import { Runtime } from "../../Runtime";
 import FixedMaths from "../../base/fixed/FixedMaths";
 import { FixedVector2 } from "../../base/fixed/FixedVector2";
-import { Timeline } from "../../tool/timeline/Timeline";
 import { ActorSearcher } from "../ActorSearcher";
 import { Component } from "./Component";
 import { bullet_move_min_step, bullet_move_step } from "../../Def";

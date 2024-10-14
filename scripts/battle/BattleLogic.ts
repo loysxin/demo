@@ -16,15 +16,17 @@ export class BattleLogic {
     game: AbstractGame
     BattleStartPushData: any;
 
+    private battleStart: boolean = false;
+    get isBattleStart() { return this.battleStart; }
+
     constructor() {
         if (BattleLogic.$ins)
             throw "error";
         BattleLogic.$ins = this;
-
-        
     }
 
     init() {
+        this.battleStart = true;
         const battle_type = this.BattleStartPushData.battle_type
         const homeland_id = this.BattleStartPushData.homeland_id
         let configManager = new ConfigManager
@@ -54,5 +56,6 @@ export class BattleLogic {
     end() {
         this.game.End()
         GameSet.UpRegisterUpdate(this.update, this);
+        this.battleStart = false;
     }
 }

@@ -1,4 +1,4 @@
-import { Component, Input, Node, NodeEventType, Prefab, UITransform, Widget, __private, instantiate } from "cc";
+import { Component, Input, Node, NodeEventType, Prefab, UITransform, Widget, __private, find, instantiate } from "cc";
 import { ResMgr } from "./manager/ResMgr";
 import { Loading } from "./Loading";
 import { getQualifiedClassName } from "./utils/Utils";
@@ -56,6 +56,8 @@ export class GameRoot {
             }
         }
         // $root = this.lays[Lay.FGUI];
+        if(find("Canvas/bg"))
+            find("Canvas/bg").setSiblingIndex(0);
 
         console.log("GameRoot", this.canvas);
         $show = this.addChild.bind(this);

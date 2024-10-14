@@ -61,6 +61,7 @@ export class BattleReplayPanel extends Panel {
 
         this.timeString = this.find("Top/timeBg/time").getComponent(Label);
 
+        this.find("Middle").active = true;
         this.pauseNode = this.find("Middle/pause");
         this.settingNode = this.find("Middle/setting");
         this.find("Middle/pause/set").on(Button.EventType.CLICK, this.OnSettingClick, this);
@@ -70,7 +71,6 @@ export class BattleReplayPanel extends Panel {
         this.soundToggle = this.find("Middle/setting/audio/audioToggle", Toggle);
         this.bgmToggle.node.on(Toggle.EventType.TOGGLE, this.onToggleChange, this);
         this.soundToggle.node.on(Toggle.EventType.TOGGLE, this.onToggleChange, this);
-
 
         this.find("Bottom/battle/pauseBtn").on(Button.EventType.CLICK, ()=>{
             this.pauseNode.active = true;
@@ -111,7 +111,6 @@ export class BattleReplayPanel extends Panel {
         BattleLogic.ins.init();
         this.playStartAni();
         //BattleLogic.ins.start();
-
   
 
         Runtime.battleModule.onBattleOver = (result)=>

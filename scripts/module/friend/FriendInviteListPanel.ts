@@ -12,6 +12,8 @@ import { FriendSharePanel } from "./FriendSharePanel";
 import { Api_Share, CallApp } from "../../Platform";
 import { SetNodeGray } from "../common/BaseUI";
 import { MsgPanel } from "../common/MsgPanel";
+import { ServerPanel } from "../login/ServerPanel";
+import { GameSet } from "../GameSet";
 
 export class FriendInviteListPanel extends Panel {
     protected prefab: string = "prefabs/panel/friend/FriendInviteListPanel";
@@ -92,10 +94,17 @@ export class FriendInviteListPanel extends Panel {
     }
 
     private onFiltrate() {
+        // let server = GameSet.Server_cfg;
+        // if(server && server.Mark){
+        //     CallApp({api:Api_Share}); 
+        // }else{
+        //     MsgPanel.Show("功能暂未开启")
+        //     return;
+        // }
         // // FriendSharePanel.Show();
-        // MsgPanel.Show("功能暂未开启")
-        // return;
-        CallApp({api:Api_Share});
+        MsgPanel.Show("功能暂未开启")
+        return;
+        // CallApp({api:Api_Share,appid:GameSet.Server_cfg.AppId});
     }
 
     protected onHide(...args: any[]): void {

@@ -14,7 +14,7 @@ import { BattleLogic } from "../BattleLogic";
 import { BattleUI } from './BattleUI';
 import { Tips } from '../../module/login/Tips';
 import { GetAttrValueByIndex } from '../../module/common/BaseUI';
-import { EventMgr, Evt_HeroDeployed } from '../../manager/EventMgr';
+import { EventMgr, Evt_HeroDeployed, Evt_SoldierAssignment } from '../../manager/EventMgr';
 import { ResMgr } from '../../manager/ResMgr';
 
 export class BattleReadyLogic {
@@ -40,7 +40,6 @@ export class BattleReadyLogic {
     assistRoleId:string;
 
     isInBattle:boolean = false;
-    isInitLineup :boolean = false;
 
     private battleSelectEffects: { [prefab: number]: Node } = {};
     private attackLineupCenterPos: Vec2 = new Vec2(0, 0);
@@ -88,7 +87,7 @@ export class BattleReadyLogic {
         } 
 
         BattleUI.Show(defData);
-
+        EventMgr.on(Evt_SoldierAssignment, this.DistributeSoldiersToHeros, this);
     }
 
     private AddBattleRole(sprite : string, index : number, position : LikeNode, angle: number, soldierId: number, needTouch: boolean = true) : IEntity {
@@ -311,8 +310,8 @@ export class BattleReadyLogic {
                 break;
             }
         }
+        this.DistributeSoldiersToHeros();
 
-        EventMgr.emit(Evt_HeroDeployed);
     }
 
     private GetHeroByIndex(index): Deployment{
@@ -365,6 +364,7 @@ export class BattleReadyLogic {
             Role: hero,
             Type: data.type,
             MaxCount: GetAttrValueByIndex(data, Attr.LeaderShip),
+            LeaderShip: GetAttrValueByIndex(data, Attr.LeaderShip),
             SoldierType: tabel.FollowerType,
             Soldiers: [],
             BattlePower: data.battle_power,
@@ -374,8 +374,7 @@ export class BattleReadyLogic {
         //this.StopSelectEffect(index);
         this.PlaySelectEffect(index, "animation2");
         this._sliders = []; // 清空存储信息
-        this.isInitLineup = false;
-        EventMgr.emit(Evt_HeroDeployed);
+        this.DistributeSoldiersToHeros();
     }
 
     private AddAttackRoles()
@@ -399,15 +398,20 @@ export class BattleReadyLogic {
                 this.PlaySelectEffect(i, "animation");
                 continue;
             }
+            let has_hero = false;
             for(let j = 0; j < roleData.length; j++){
                 if(roleData[j].id == attackRoles[i].role_id){
                     BattleReadyLogic.ins.AddBattleHeroByIndex(roleData[j].id, i, roleData[j]);
+                    has_hero = true;
                     break;
                 }
             }
+            if(!has_hero){
+                this.PlaySelectEffect(i, "animation");
+            }
         }
-
-        this.isInitLineup = true;
+        
+        this.DistributeSoldiersToHeros(true);
     }
 
     private async AddDefRoles(defData : any)
@@ -477,12 +481,13 @@ export class BattleReadyLogic {
     private SendStartBattleMsg()
     {
         let attackHeros = [null, null, null, null, null];
+        let tmpData = this.GetPlayerSoldiers();
         for(let i = 0; i < this.index2Hero.length; i++)
         {
             let tmp = this.index2Hero[i];
             if(tmp.Index < attackHeros.length)
             {
-                this.DistributeSoldiersToHeros(tmp);
+                this.DistributeSoldiersToHero(tmp, tmpData);
                 const role = {
                     role_id: tmp.ID,
                     soldiers: tmp.Soldiers
@@ -499,8 +504,7 @@ export class BattleReadyLogic {
                 lineup: attackHeros
             }
         }
-        Session.Send(data);
-        this.isInitLineup = true;
+        Session.Send(data,  MsgTypeSend.SetAttackRoles, 2000);
     }
 
 
@@ -534,28 +538,45 @@ export class BattleReadyLogic {
 
         const herosPower = this.index2Hero.reduce((sum, hero) => sum + hero.BattlePower, 0);
         let soldiersPower = 0;
-        if(this.isInitLineup)
-        {
-            let attackRoles : SBattleRole[] = PlayerData.attackRoles;
-            if(attackRoles != null && attackRoles.length > 0)
+
+        for(let i = 0; i < this.index2Hero.length; i++)
             {
-                for(let i = 0; i < attackRoles.length; i++)
-                {
-                     if(attackRoles[i] == null || attackRoles[i].soldiers == null)
-                        continue;
-                    soldiersPower += attackRoles[i].soldiers.reduce((sum, soldier) => {
-                        return sum + soldier.count * CountPower(soldier.id, 1)
-                    }, 0);
-                }
+                let tmp = this.index2Hero[i];
+                soldiersPower += tmp.Soldiers.reduce((sum, soldier) => {
+                    return sum + soldier.count * CountPower(soldier.id, 1);
+                }, 0)
             }
-        }
-        else
-        {
-            soldiersPower = this._sliders.reduce((accumulator, currentValue) => {
-                let battlePower = CountPower(currentValue.id, 1) * currentValue.count;
-                return accumulator + battlePower;
-            }, 0);
-        }
+
+        // if(this.isInitLineup)
+        // {
+        //     let attackRoles : SBattleRole[] = PlayerData.attackRoles;
+        //     if(attackRoles != null && attackRoles.length > 0)
+        //     {
+        //         for(let i = 0; i < attackRoles.length; i++)
+        //         {
+        //              if(attackRoles[i] == null || attackRoles[i].soldiers == null)
+        //                 continue;
+        //             soldiersPower += attackRoles[i].soldiers.reduce((sum, soldier) => {
+        //                 return sum + soldier.count * CountPower(soldier.id, 1)
+        //             }, 0);
+        //         }
+        //     }
+        // }
+        // else
+        // {
+        //     for(let i = 0; i < this.index2Hero.length; i++)
+        //     {
+        //         let tmp = this.index2Hero[i];
+        //         soldiersPower += tmp.Soldiers.reduce((sum, soldier) => {
+        //             return sum + soldier.count * CountPower(soldier.id, 1);
+        //         }, 0)
+        //     }
+
+        //     // soldiersPower = this._sliders.reduce((accumulator, currentValue) => {
+        //     //     let battlePower = CountPower(currentValue.id, 1) * currentValue.count;
+        //     //     return accumulator + battlePower;
+        //     // }, 0);
+        // }
 
        
 
@@ -613,6 +634,7 @@ export class BattleReadyLogic {
         }
 
         this.battleSelectEffects = {};
+        EventMgr.off(Evt_SoldierAssignment, this.DistributeSoldiersToHeros, this);
     }
 
 
@@ -624,9 +646,9 @@ export class BattleReadyLogic {
             let hero = this.index2Hero[i];
             hero.SoldierType.sort((a, b) => {return a - b});
             if(soldier2Number.get(hero.SoldierType[0]))
-                soldier2Number.set(hero.SoldierType[0], soldier2Number.get(hero.SoldierType[0]) + hero.MaxCount);
+                soldier2Number.set(hero.SoldierType[0], soldier2Number.get(hero.SoldierType[0]) + hero.LeaderShip);
             else
-                soldier2Number.set(hero.SoldierType[0], hero.MaxCount);
+                soldier2Number.set(hero.SoldierType[0], hero.LeaderShip);
         }
 
         return soldier2Number;
@@ -642,31 +664,53 @@ export class BattleReadyLogic {
     }
     
 
-    private DistributeSoldiersToHeros(hero: Deployment)
+    private DistributeSoldiersToHeros(isInitLineup: boolean = false){
+        let tmpData = this.GetPlayerSoldiers();
+        for(let i = 0; i < this.index2Hero.length; i++)
+        {
+            let tmp = this.index2Hero[i];
+            this.DistributeSoldiersToHero(tmp, tmpData, isInitLineup);
+        }
+
+        EventMgr.emit(Evt_HeroDeployed);
+    }
+
+
+    private DistributeSoldiersToHero(hero: Deployment, tmpData, isInitLineup: boolean = false)
     {   
-        let tmpData;
-        if(this._sliders.length > 0)
-            tmpData = this._sliders.filter(soldier => hero.SoldierType.indexOf(soldier.id) != -1);
-        else
-            tmpData = this.playerSoldiers.filter(soldier => hero.SoldierType.indexOf(soldier.id) != -1);
+        // let tmpData = [];
+        // if(this._sliders.length > 0)
+        //     tmpData = this._sliders.filter(soldier => hero.SoldierType.indexOf(soldier.id) != -1);
+        // else
+        //     tmpData = this.playerSoldiers.filter(soldier => hero.SoldierType.indexOf(soldier.id) != -1);
+
+        tmpData = tmpData.filter(soldier => hero.SoldierType.indexOf(soldier.id) != -1);
+        hero.Soldiers = [];
+        if(!tmpData || tmpData.length <= 0) return;
 
         tmpData.sort((a, b) => {return b.id - a.id});
 
-        if(this.isInitLineup)
+        if(isInitLineup)
         {
             const matchingRole = PlayerData.attackRoles.find(role => role != null && role.role_id === hero.ID);
             if (matchingRole) {
                 hero.MaxCount = matchingRole.soldiers.reduce((sum, soldier) => sum + soldier.count, 0);
             }
         }
+        else
+        {
+            hero.MaxCount = hero.LeaderShip;
+        }
+
+        let maxCount = hero.MaxCount;
 
         for(let i = 0; i < tmpData.length; i++)
         {
             if(tmpData[i].count <= 0)
                 continue;
             
-            let count = tmpData[i].count > hero.MaxCount ? hero.MaxCount : tmpData[i].count;
-            hero.MaxCount -= count;
+            let count = tmpData[i].count > maxCount ? maxCount : tmpData[i].count;
+            maxCount -= count;
             tmpData[i].count -= count;
             let solider = 
             {
@@ -676,7 +720,7 @@ export class BattleReadyLogic {
 
             hero.Soldiers.push(solider);
 
-            if(hero.MaxCount <= 0)
+            if(maxCount <= 0)
                 break;
         }
 
@@ -708,6 +752,15 @@ export class BattleReadyLogic {
         return this.index2Hero;
     }
 
+    private GetPlayerSoldiers(){
+        let tmpData = [];
+        if(this._sliders.length > 0)
+            tmpData = JSON.parse(JSON.stringify(this._sliders))
+        else
+            tmpData = JSON.parse(JSON.stringify(this.playerSoldiers));
+
+        return tmpData;
+    }
 
 
 }

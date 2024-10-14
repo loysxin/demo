@@ -26,6 +26,8 @@ export class Plunder {
 
     battleShowTime;
 
+    battleResult = "lose";//模式結果
+
     InitBattleActor() {
         this.battleOver = false;
         this.InitRoleBattle();
@@ -275,7 +277,8 @@ export class Plunder {
     
         // 判断是否有一个阵营全部阵亡
         if (camp1Count === 0 || camp2Count === 0) {
-            this.Over(camp1Count > 0 ? "win" : "lose")
+            this.battleResult = camp1Count > 0 ? "win" : "lose";
+            this.Over(this.battleResult)
             return true;
         }
 
@@ -311,7 +314,10 @@ export class Plunder {
         this.battleOver = true;
 
         if (this.onBattleOver) {
-            this.onBattleOver(result);
+            if(!Runtime.game.isVerification) // 如果不是验证模式
+                this.onBattleOver(result);
+            else
+                this.onBattleOver(this.battleResult)
         }
     }
 

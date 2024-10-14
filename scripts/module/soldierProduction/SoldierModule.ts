@@ -10,6 +10,7 @@ import { SoldierProductionPanel } from "./SoldierProductionPanel";
 
 export class SoldierModule {
     constructor() {
+        window.send = Session.Send;
         Session.on(MsgTypeRet.SoldierProductionRet, this.onSoldierProductionResponse, this);
         Session.on(MsgTypeRet.SoldierProductionPush, this.onSoldierProductionPush, this);
         EventMgr.on(Evt_Soldier_JiaSu, this.onSoldierJiaSu, this);

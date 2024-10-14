@@ -1,7 +1,7 @@
 import { DEV, IOS } from "cc/env";
 import { MsgTypeRet, MsgTypeSend } from "../../MsgType";
-import { GetUserCode, autoLogin, debugLogin, getAdcfg, hasSdk } from "../../Platform";
-import { EventMgr, Evt_Map_Tile_Complete, Evt_ReConnect, Evt_ReConnect_Success, Evt_ReLogin, Evt_Show_Scene } from "../../manager/EventMgr";
+import { CallApp, CopyToClip, GetUserCode, GetVersionName, autoLogin, debugLogin, getAdcfg, hasSdk } from "../../Platform";
+import { EventMgr, Evt_Hide_Home_Ui, Evt_Hide_Scene, Evt_Map_Tile_Complete, Evt_ReConnect, Evt_ReConnect_Success, Evt_ReLogin, Evt_ResetConfig, Evt_Show_Scene } from "../../manager/EventMgr";
 import { GetLoginInfo, Http, SendChaoyouToken } from "../../net/Http";
 import { Session } from "../../net/Session";
 import LocalStorage from "../../utils/LocalStorage";
@@ -12,15 +12,35 @@ import { LoginPanel } from "./LoginPanel";
 import { Second } from "../../utils/Utils";
 import { AdHelper } from "../../AdHelper";
 import { WaitPanel } from "./WaitPanel";
-import { Game, game } from "cc";
+import { Game, find, game } from "cc";
 import { MsgPanel } from "../common/MsgPanel";
 import { ServerPanel } from "./ServerPanel";
 import { ResMgr } from "../../manager/ResMgr";
+import { AudioGroup, AudioMgr } from "../../manager/AudioMgr";
+import { HomeScene } from "../home/HomeScene";
+import { SceneCamera } from "../SceneCamera";
+import PlayerData from "../roleModule/PlayerData";
+import { AssertPanel } from "./AssertPanel";
 
 export class LoginModule {
     private serverInfo: any;
     private loginning = false;
     constructor() {
+        let versionName = GetVersionName();
+        if (versionName) {
+            let ls = versionName.split(".");
+            if (ls.length) {
+                let version = Number(ls[2]);
+                if (version < 19) {
+                    CopyToClip("https://www.pgyer.com/zhilingjueqi");
+                    AssertPanel.Show("此版本已停止维护，请点击复制链接，前往浏览器下载最新最新版本。", () => {
+                        game.end();
+                    }, null, "复制链接");
+                    return;
+                }
+            }
+        }
+        
         Session.on(MsgTypeRet.VerifyTokenRet, this.onLogin, this);
         EventMgr.on(Evt_ReLogin, this.onRelogin, this);
         EventMgr.on(Evt_ReConnect, this.reconnect, this);
@@ -34,6 +54,19 @@ export class LoginModule {
         } else {
             LoginPanel.Show(this.login.bind(this));
         }
+        EventMgr.on("logout_game", this.onBackToLogin, this);
+    }
+
+    protected onBackToLogin() {
+        let panel: any = GameSet.ForBack();
+        while (panel) {
+            if (panel.Hide) panel.Hide();
+            panel = GameSet.ForBack();
+        }
+        Session.Close(() => {
+            console.log("onBackToLogin");
+            EventMgr.emit(Evt_ReLogin);
+        });
     }
 
     protected onShow() {
@@ -45,6 +78,16 @@ export class LoginModule {
     }
 
     protected onRelogin() {
+        EventMgr.emit(Evt_ResetConfig);
+        find("Canvas/bg").active = true;
+        AudioMgr.All(true, AudioGroup.Music);
+        AudioMgr.All(true, AudioGroup.Sound);
+        AudioMgr.All(true, AudioGroup.Skill);
+        EventMgr.emit(Evt_Hide_Scene);
+        EventMgr.emit(Evt_Hide_Home_Ui);
+        GameSet.intoGame = false;
+        PlayerData.fightState = 0;
+        PlayerData.RunHomeId = undefined;
         if (ResMgr.HasResource("config/channel_cfg") && !DEV && !debugLogin()) {
             ServerPanel.Show(this.login.bind(this));
         } else {
@@ -68,7 +111,8 @@ export class LoginModule {
         this.serverInfo = await Http.Send(uri, { code: code });
         console.log('loginInfo', this.serverInfo);
         if (!this.serverInfo || !this.serverInfo.gate_url || !this.serverInfo.gate_url.length) {
-            MsgPanel.Show("请求失败，请重试！");
+            MsgPanel.Show("您未兑换植灵卡权益或请求失败！");
+            CallApp({ api: "logout_game" });
             if (ResMgr.HasResource("config/channel_cfg") && !DEV && !debugLogin()) {
                 ServerPanel.Show(loginFunc, true);
             } else {
@@ -92,6 +136,7 @@ export class LoginModule {
                     type: "0_VerifyToken",
                     data: {
                         token: GameSet.Token,
+                        version: "2"
                     }
                 }
                 Session.Send(data);
@@ -122,6 +167,7 @@ export class LoginModule {
                     type: "0_VerifyToken",
                     data: {
                         token: GameSet.Token,
+                        version: "2"
                     }
                 }
                 Session.Send(data);

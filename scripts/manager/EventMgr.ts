@@ -190,6 +190,7 @@ export const Evt_Passive_Skill_Update = "Evt_Passive_Skill_Update";
 
 /**前端保存数据更新 */
 export const Evt_ConfigData_Update = "Evt_ConfigData_Update";
+export const Evt_ResetConfig = "Evt_ResetConfig";
 
 /**刷新获取收益详情 */
 export const Evt_GetIncommons = "Evt_GetIncommons";
@@ -296,5 +297,19 @@ export const Evt_GuildChange = "Evt_GuildChange";
 export const Evt_GuildSearch = "Evt_GuildSearch";
 /**公会管理菜单弹出*/
 export const Evt_GuildMenuShow = "Evt_GuildMenuShow";
+/**个人公会列表申请更新*/
+export const Evt_SelfApplyGuildUpdate = "Evt_SelfApplyGuildUpdate";
+/**公会列表审批结果*/
+export const Evt_GuildAuditResult = "Evt_GuildAuditResult";
+/**公会列表审批更新*/
+export const Evt_GuildAuditUpdate = "Evt_GuildAuditUpdate";
+/**公会排行榜下发*/
+export const Evt_GuildRankUpdate = "Evt_GuildRankUpdate";
+/**公会申请加入结果*/
+export const Evt_GuildApplyResult = "Evt_GuildApplyResult";
+/**公会事件更新*/
+export const Evt_GuildEventUpdate = "Evt_GuildEventUpdate";
 /**权益卡领取奖励返回*/
 export const Evt_RightsGetReward = "Evt_RightsGetReward";
+/**刷新主基地奖励是否可领取 */
+export const Evt_FlushJiDiReward = "Evt_FlushJiDiReward";

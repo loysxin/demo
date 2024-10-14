@@ -5,6 +5,7 @@ import { Session } from "../../net/Session";
 import { MsgTypeSend } from "../../MsgType";
 import PlayerData from "../roleModule/PlayerData";
 import { CfgMgr, GuildPostType } from "../../manager/CfgMgr";
+import { EventMgr, Evt_GuildChange } from "../../manager/EventMgr";
 
 export class GuildExitPanel extends Panel {
     protected prefab: string = "prefabs/panel/guild/GuildExitPanel";
@@ -27,23 +28,29 @@ export class GuildExitPanel extends Panel {
     }
     
     protected onShow(): void {
-       
+        EventMgr.on(Evt_GuildChange, this.onGuildChange, this);
     }
 
     protected onHide(...args: any[]): void {
-        
+        EventMgr.off(Evt_GuildChange, this.onGuildChange, this);
+    }
+    private onGuildChange():void{
+        if(!this.node.activeInHierarchy) return;
+        if(!PlayerData.MyGuild){
+            this.Hide();
+        }
     }
     private updateShow():void{
         let tipsStr:string = "";
-        let exitCdTime:number = CfgMgr.GetGuildComm().ExitCdTime;
+        let exitCdTime:number = CfgMgr.GetGuildComm().ExitCdTime / 3600;
         if(PlayerData.GetGuildMeetPost(this.playerId, GuildPostType.President))
         {
             this.titleLab.string = "解散公会";
-            tipsStr = `解散公会后，将影响捐献和领取福利，加入新公会<color=#C75D17>${exitCdTime}小时</color>后才可重新捐献或领取福 利，确认解散吗?`;
+            tipsStr = `解散公会后，将影响捐献和领取福利，加入新公会<color=#C75D17>${exitCdTime}小时</color>后才可重新捐献或领取福利，确认解散吗?`;
             
         }else{
             this.titleLab.string = "退出公会";
-            tipsStr = `退出公会后，将影响捐献和领取福利，加入新公会<color=#C75D17>${exitCdTime}小时</color>后才可重新捐献或领取福 利，确认退出吗?`;
+            tipsStr = `退出公会后，将影响捐献和领取福利，加入新公会<color=#C75D17>${exitCdTime}小时</color>后才可重新捐献或领取福利，确认退出吗?`;
         }
         this.cont.string = tipsStr;
     }

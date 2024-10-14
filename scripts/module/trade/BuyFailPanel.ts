@@ -24,17 +24,8 @@ export class BuyFailPanel extends Panel {
     }
 
     async flush(err_type:number, data: SOrderData) {
-        let str = ""
-        let tittle = ""
-        if(err_type == 117){
-            tittle = "物品不足"
-            str = "由于他人抢购，货物不足，请重新选择想要购买的物品数量！";
-        }else{
-            tittle = "订单不足"
-            str = "由于别人已抢先出售，订单数量不足，请重新选择想要出售的订单";
-        }
-        this.tittle.string = tittle
-        this.lbl.string = str;
+        this.tittle.string = "订单不足"
+        this.lbl.string = "订单不足，已被他人抢购，请查看其他订单";
     }
 
     private onUpdate() {

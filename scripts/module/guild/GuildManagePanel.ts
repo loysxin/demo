@@ -3,21 +3,22 @@ import { Panel } from "../../GameRoot";
 import PlayerData, { SGuild, SThing } from "../roleModule/PlayerData";
 import { AutoScroller } from "../../utils/AutoScroller";
 import { ConsumeItem } from "../common/ConsumeItem";
-import { CfgMgr, StdGuildComm, StdGuildLogo } from "../../manager/CfgMgr";
+import { CfgMgr, StdGuildChangeName, StdGuildComm, StdGuildLogo } from "../../manager/CfgMgr";
 import { ItemUtil } from "../../utils/ItemUtils";
 import { MsgPanel } from "../common/MsgPanel";
 import { Session } from "../../net/Session";
 import { folder_icon, ResMgr } from "../../manager/ResMgr";
 import { MsgTypeSend } from "../../MsgType";
 import { EventMgr, Evt_GuildChange } from "../../manager/EventMgr";
+import { SetNodeGray } from "../common/BaseUI";
 
 export class GuildManagePanel extends Panel {
     protected prefab: string = "prefabs/panel/guild/GuildManagePanel";
     private logo:Sprite;
     private inputName: EditBox;
     private logoList:AutoScroller;
-    private needApply:Toggle;
-    private noApply:Toggle;
+    private needApplyBtn:Button;
+    private noApplyBtn:Button;
     private applyLab:Label;
     private leftBtn:Button;
     private slider:Slider;
@@ -34,13 +35,14 @@ export class GuildManagePanel extends Panel {
     private curLv:number = 1;
     private data:SGuild;
     private applyState:number;
+    private stdGuildChangeName:StdGuildChangeName;
     protected onLoad(): void {
         this.logo = this.find("logo", Sprite);
         this.inputName = this.find("inputName").getComponent(EditBox);
         this.logoList = this.find("logoList").getComponent(AutoScroller);
         this.applyLab = this.find("ToggleGroup/applyLab").getComponent(Label);
-        this.needApply = this.find("ToggleGroup/Toggle1").getComponent(Toggle);
-        this.noApply  = this.find("ToggleGroup/Toggle2").getComponent(Toggle);
+        this.needApplyBtn = this.find("ToggleGroup/needApplyBtn").getComponent(Button);
+        this.noApplyBtn  = this.find("ToggleGroup/noApplyBtn").getComponent(Button);
         this.leftBtn = this.find("sliderCont/leftBtn").getComponent(Button);
         this.slider = this.find("sliderCont/slider").getComponent(Slider);
         this.sliderBar = this.find("sliderCont/slider/sliderBar");
@@ -64,12 +66,11 @@ export class GuildManagePanel extends Panel {
         this.logoDatas = CfgMgr.GetGuildLogoList();
         
         this.stdGuildComm = CfgMgr.GetGuildComm();
-        let consumeList:SThing[] = ItemUtil.GetSThingList(this.stdGuildComm.RenameCostType, this.stdGuildComm.RenameCostID, this.stdGuildComm.RenameCostCount);
-        this.consumeItem.SetData(consumeList[0]);
+        
         this.maxLv = CfgMgr.GetHomeMaxLv();
 
-        this.needApply.node.on(Toggle.EventType.TOGGLE, this.onToggleChange, this);
-        this.noApply.node.on(Toggle.EventType.TOGGLE, this.onToggleChange, this);
+        this.needApplyBtn.node.on(Button.EventType.CLICK, this.onToggleChange, this);
+        this.noApplyBtn.node.on(Button.EventType.CLICK, this.onToggleChange, this);
         this.slider.node.on('slide', this.onSlide, this);
         this.leftBtn.node.on(Button.EventType.CLICK, this.onBtnClick, this);
         this.rightBtn.node.on(Button.EventType.CLICK, this.onBtnClick, this);
@@ -77,6 +78,8 @@ export class GuildManagePanel extends Panel {
     }
     public flush(): void{
         this.data = PlayerData.MyGuild;
+        let num:number = (this.data.name_changed || 0) + 1;
+        this.stdGuildChangeName = CfgMgr.GetGuildChangeName(num);
         this.updateShow();
     }
     
@@ -92,37 +95,41 @@ export class GuildManagePanel extends Panel {
             this.Hide();
             return;
         }
+        this.flush();
     }
     private updateShow():void{
+        let consumeList:SThing[] = ItemUtil.GetSThingList(this.stdGuildChangeName.CostType, this.stdGuildChangeName.CostID, this.stdGuildChangeName.CostCount);
+        this.consumeItem.SetData(consumeList[0]);
         this.inputName.string = this.data.name;
         this.inputNotice.string = this.data.announcement.content;
         this.slider.progress = this.data.join_criteria.min_home_level / this.maxLv;
         this.selectLogoData = this.logoDatas.find((std:StdGuildLogo)=>{return std.ID == Number(this.data.logo)});
-        if(this.data.join_criteria.no_criteria > 0){
-            this.needApply.isChecked = true;
-            this.applyState = 1;
+        if(this.data.join_criteria.need_applications > 0){
+            this.onToggleChange(this.needApplyBtn);
         }else{
-            this.noApply.isChecked = true;
-            this.applyState = 0;
+            this.onToggleChange(this.noApplyBtn);
         }
         this.curLv = this.data.join_criteria.min_home_level;
         this.changeSlidePro(2);
         this.updateCurrLogo();
         this.logoList.UpdateDatas(this.logoDatas);
     }
-    private onToggleChange(toggle:Toggle):void{
-        if(this.needApply.isChecked){
-            this.applyLab.string = "需要验证";
+    private onToggleChange(btn:Button):void{
+        if(this.needApplyBtn == btn){
             this.applyState = 1;
+            SetNodeGray(this.needApplyBtn.node, true);
+            SetNodeGray(this.noApplyBtn.node, false);
         }else{
-            this.applyLab.string = "不需要验证";
+            SetNodeGray(this.needApplyBtn.node, false);
+            SetNodeGray(this.noApplyBtn.node, true);
             this.applyState = 0;
         } 
+        this.applyLab.string = this.applyState == 1 ? "需要验证" : "不需要验证";
     }
     private onSlide(event: Slider) {
         let tempNum:number = Math.ceil(event.progress * this.maxLv);
         if(tempNum > this.maxLv) tempNum = this.maxLv;
-        this.curLv = tempNum;
+        this.curLv = Math.max(tempNum, 1);
         this.changeSlidePro(2);
         
     }
@@ -146,9 +153,10 @@ export class GuildManagePanel extends Panel {
                         return;
                     }
                     
-                    if (!ItemUtil.CheckThingConsumes(this.stdGuildComm.RenameCostType, this.stdGuildComm.RenameCostID, this.stdGuildComm.RenameCostCount, true)) {
+                    if (!ItemUtil.CheckThingConsumes(this.stdGuildChangeName.CostType, this.stdGuildChangeName.CostID, this.stdGuildChangeName.CostCount, true)) {
                         return;
                     }
+                    Session.Send({type: MsgTypeSend.GuildChangeName, data: {guild_id:PlayerData.MyGuild.guild_id,new_name:guildName}});
                 }
                 let notice:string = this.inputNotice.string;
                 if(notice != this.data.announcement.content){
@@ -157,28 +165,16 @@ export class GuildManagePanel extends Panel {
                         MsgPanel.Show(`公告内容不得大于${this.stdGuildComm.AnnouncementMaxLen}个字符`);
                         return;
                     }
+                    Session.Send({type: MsgTypeSend.GuildChangeAnnouncement, data: {guild_id:PlayerData.MyGuild.guild_id,new_announcement:{content:notice}}});
                 }
                 if(Number(this.data.logo) != this.selectLogoData.ID){
-                    isChange = true;
+                    Session.Send({type: MsgTypeSend.GuildChangeLogo, data: {guild_id:PlayerData.MyGuild.guild_id,new_logo:this.selectLogoData.ID.toString(),}});
                 }
-                if(this.data.join_criteria.min_home_level != this.curLv){
-                    isChange = true;
+                if(this.data.join_criteria.min_home_level != this.curLv || this.data.join_criteria.need_applications != this.applyState){
+                    Session.Send({type: MsgTypeSend.GuildChangeJoinCriteria, data: {guild_id:PlayerData.MyGuild.guild_id, new_join_criteria:{need_applications:this.applyState, min_home_level: this.curLv}}});
                 }
-                if(this.data.join_criteria.no_criteria != this.applyState){
-                    isChange = true;
-                }
-                if(!isChange){
-                    MsgPanel.Show("公会信息未发生任何改变");
-                    return;
-                }
-                Session.Send({ type: MsgTypeSend.GuildCreate, 
-                    data: {
-                        name: guildName,
-                        logo: this.selectLogoData.ID.toString(),
-                        announcement:{content:notice},
-                        join_criteria:{min_home_level:this.curLv, no_criteria:this.needApply.isChecked ? 1 : 0},
-                    } 
-                });
+                
+                this.Hide();
                 break;
             case this.leftBtn:
                 this.changeSlidePro(0);
@@ -190,7 +186,7 @@ export class GuildManagePanel extends Panel {
     }
     private changeSlidePro(type:number):void{
         if(type == 0){
-            if(this.curLv > 1){
+            if(this.curLv > 2){
                 this.curLv --;
             }else{
                 return;
@@ -239,4 +235,5 @@ export class GuildManagePanel extends Panel {
             this.logo.spriteFrame = res;
         });
     }
+    
 }

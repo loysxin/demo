@@ -1,7 +1,7 @@
 import { Button, EditBox, EventTouch, Input, Label, Node, Skeleton, Sprite, SpriteFrame, Toggle, Touch, UIOpacity, instantiate, path, random, sp, utils, v3 } from "cc";
 import { Panel } from "../../GameRoot";
 import { MsgTypeSend } from "../../MsgType";
-import { EventMgr, Evt_Currency_Updtae, Evt_GetIncommons, Evt_GetUPLineInfo, Evt_Hide_Scene, Evt_Show_Scene } from "../../manager/EventMgr";
+import { EventMgr, Evt_Currency_Updtae, Evt_GetIncommons, Evt_GetUPLineInfo, Evt_Hide_Scene, Evt_Show_Scene, Goto } from "../../manager/EventMgr";
 import { Session } from "../../net/Session";
 import { FriendListPanel } from "./FriendListPanel";
 import { FriendInviteListPanel } from "./FriendInviteListPanel";
@@ -282,7 +282,7 @@ export class FriendPanel extends Panel {
 
     /**邀请 */
     private onInvite() {
-        FriendInviteListPanel.Show();
+        Goto(PANEL_TYPE.FriendInviteListPanel);
     }
 
     //添加绑定好友

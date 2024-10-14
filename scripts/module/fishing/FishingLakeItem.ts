@@ -1,6 +1,7 @@
-import { Node, Component, Label, sp } from "cc";
+import { Node, Component, Label, sp, path } from "cc";
 import { StdLake } from "../../manager/CfgMgr";
 import PlayerData, { SFishingLakeData, SFishingRoundInfo } from "../roleModule/PlayerData";
+import { ResMgr } from "../../manager/ResMgr";
 
 export class FishingLakeItem extends Component {
     private feedCont:Node;
@@ -40,11 +41,20 @@ export class FishingLakeItem extends Component {
         this.data = data;
         this.updateShow();
     }
-    PlayIcedEffect():void{
+    async PlayIcedEffect():Promise<void>{
         this.icedModel.node.active = true;
+        this.icedModel.skeletonData = null;
+        let icedEfeectName:string = "mg_btnice";
+        if(PlayerData.CurFishRoundInfo && PlayerData.CurFishRoundInfo.kill_type > 1){
+            icedEfeectName = "mg_btnice_hell";
+        }
+        this.icedModel.skeletonData = await ResMgr.LoadResAbSub(path.join("spine/effect", icedEfeectName, "skeleton"), sp.SkeletonData);
         this.icedModel.setAnimation(0, "show", false);
         this.icedModel.setCompleteListener(() => {
-            this.icedModel.setAnimation(0, "loop", true);
+            if(this.icedModel.findAnimation("loop")){
+                this.icedModel.setAnimation(0, "loop", true);
+            }
+            
         });
         
         

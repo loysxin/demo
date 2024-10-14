@@ -98,6 +98,7 @@ export class LootVsPanel extends Panel {
                 let roleLvLab = find(`infoCont/roleLvLab`, node).getComponent(Label);
                 let roleNameLab = find(`infoCont/roleNameLab`, node).getComponent(Label);
                 let revengeIcon = find(`revengeIcon`, node);
+                let shieldEffect = find(`ui_shield`, node);
                 //let roleNameBg = node.getChildByPath(`infoCont/roleNameBg`).getComponent(UITransform);
                 roleLvLab.string = data.level;
                 powerLab.string = data.battle_power;
@@ -105,9 +106,18 @@ export class LootVsPanel extends Panel {
                 roleNameLab.string = data.player_name;
                 // roleNameLab.updateRenderData();
                 //roleNameBg.width = roleNameLab.node.getComponent(UITransform).width + 70;
+                shieldEffect.active = data.has_shield;
                 revengeIcon.active = data.are_enemies;
                 node.off(Node.EventType.TOUCH_END);
                 node.on(Node.EventType.TOUCH_END, () => {
+
+                    if(data.has_shield)
+                    {
+                        Tips.Show(CfgMgr.GetText("pvp_2"));
+                        return;
+                    }
+
+
                     let sendData = {
                         type: MsgTypeSend.GetPlayerBattleData,
                         data: {

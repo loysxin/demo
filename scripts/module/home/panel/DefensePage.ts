@@ -147,7 +147,6 @@ export class DefensePage extends Component {
         let info = ls[index];
         if (info) {
             ls.splice(index, 1);
-            this.DistributeSoldiersToHeros(ls);
             let sendData = {
                 type: MsgTypeSend.SetDefenseRoles,
                 data: {
@@ -155,6 +154,7 @@ export class DefensePage extends Component {
                 }
             }
             Session.Send(sendData);
+            this.DistributeSoldiersToHeros(ls);
         } else {
             let info = PlayerData.GetBuilding(this.buildingId);
             let std = CfgMgr.GetBuildingLv(this.buildingId, info.level);
@@ -237,7 +237,8 @@ export class DefensePage extends Component {
             let hero = PlayerData.GetRoleById(battle.role_id);
             if (hero) {
                 let roleType = CfgMgr.GetRole()[hero.type];
-                if (battle.soldiers == undefined) battle.soldiers = [];
+                //if (battle.soldiers == undefined) 
+                battle.soldiers = [];
 
                 if (false) //todo 取消自动填充
                 {

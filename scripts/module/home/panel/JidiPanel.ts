@@ -8,6 +8,9 @@ import { Tips } from "../../login/Tips";
 import { EventMgr, Evt_Hide_Home_Ui, Evt_Show_Home_Ui } from "../../../manager/EventMgr";
 import { Tips2 } from "./Tips2";
 import { CfgMgr } from "../../../manager/CfgMgr";
+import { BaseWorkPage } from "./BaseWorkPage";
+import { DefensePage } from "./DefensePage";
+import { JidiBaseWorkPage } from "./JidiBaseWorkPage";
 
 export class JidiPanel extends Panel {
     protected prefab: string = "prefabs/panel/JidiPanel";
@@ -15,19 +18,31 @@ export class JidiPanel extends Panel {
     protected buildingId: number;
     protected navPage: BaseNavPage;
     protected lvPage: BaseLvPage;
+    protected JidiworkPage: JidiBaseWorkPage;
+
+    protected selectPage = 0;
+    private pages: (BaseLvPage | JidiBaseWorkPage)[] = [];
+
     private heleBtn: Node;
     protected onLoad() {
         this.CloseBy("mask");
         this.heleBtn = this.find("BaseNavPage/frame/tileBar/helpBtn");
         this.navPage = this.find("BaseNavPage").getComponent(BaseNavPage);
         this.lvPage = this.find("BaseLvPage").addComponent(BaseLvPage);
+        this.JidiworkPage = this.find("BaseWorkPage").addComponent(JidiBaseWorkPage);
+        this.pages = [this.lvPage, this.JidiworkPage];
+        for (let page of this.pages) {
+            page.Hide();
+        }
         this.heleBtn.on(Input.EventType.TOUCH_END, this.onHelpBtn, this);
+        this.navPage.node.on('select', this.onSelect, this);
         this.navPage.node.on("close", this.Hide, this);
     }
 
     public flush(buildingId: number) {
         if (!this.buildingId && !buildingId) return;
         if (buildingId) this.buildingId = buildingId;
+        this.navPage.SetNav(["升级", "工作"], [], this.lvPage, this.JidiworkPage);
         let state = PlayerData.GetBuildingByType(BuildingType.ji_di, PlayerData.RunHomeId)[0];
         if (!state) {
             this.Hide();
@@ -35,7 +50,7 @@ export class JidiPanel extends Panel {
             return;
         }
         let std = CfgMgr.GetBuildingUnLock(this.buildingId);
-        this.navPage.SetTile(std.remark, buildingId, state.level);
+        this.navPage.SetTile(std.remark, buildingId, state.level, true);
         this.lvPage.Show(state.id);
     }
 
@@ -43,6 +58,12 @@ export class JidiPanel extends Panel {
         EventMgr.emit(Evt_Hide_Home_Ui);
 
 
+    }
+
+    protected onSelect(index: number, target?: Node) {
+        if (!this.buildingId) return;
+        this.selectPage = index;
+        this.pages[index].Show(this.buildingId);
     }
 
     private onHelpBtn() {

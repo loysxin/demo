@@ -11,6 +11,7 @@ import { DateUtils } from "../../utils/DateUtils";
 import { TaskActiveBoxTipsCont } from "./TaskActiveBoxTipsCont";
 import { ItemUtil } from "../../utils/ItemUtils";
 import { ClickTipsPanel } from "../common/ClickTipsPanel";
+import { AdaptBgTop } from "../common/BaseUI";
 enum TaskTabType {
     Page_Daily,//每日任务
     Page_Week,//每周任务
@@ -84,6 +85,7 @@ export class TaskPanel extends Panel {
         this.onPage(this.navBtns[page].getComponent(Toggle));
     }
     public flush(page?: TaskTabType): void{
+        AdaptBgTop(this.node.getChildByName("mask"));
         this.SetPage(page || TaskTabType.Page_Daily);
     }
     protected onHide(...args: any[]): void {

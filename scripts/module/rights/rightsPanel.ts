@@ -1,7 +1,7 @@
-import { Button, EventTouch, Input, Label, Layout, Node, ScrollView, Sprite, SpriteFrame, Toggle, instantiate, path,} from "cc";
+import { Button, EventTouch, Input, Label, Layout, Node, ScrollView, Sprite, SpriteFrame, Toggle, Widget, instantiate, path,} from "cc";
 import { Panel } from "../../GameRoot";
-import { EventMgr, Evt_Hide_Scene, Evt_RightsGetReward, Evt_Show_Scene } from "../../manager/EventMgr";
-import { CfgMgr, StdEquityList } from "../../manager/CfgMgr";
+import { EventMgr, Evt_Hide_Scene, Evt_RightsGetReward, Evt_Show_Scene, Goto } from "../../manager/EventMgr";
+import { CfgMgr, StdEquityList, StdShopowner } from "../../manager/CfgMgr";
 import { ResMgr, folder_loot } from "../../manager/ResMgr";
 import { AutoScroller } from "../../utils/AutoScroller";
 import { ItemUtil } from "../../utils/ItemUtils";
@@ -15,6 +15,9 @@ import { MsgPanel } from "../common/MsgPanel";
 import { CLICKLOCK } from "../common/Drcorator";
 import { TradeHeroPanel } from "../trade/TradeHeroPanel";
 import { SetNodeGray } from "../common/BaseUI";
+import { GameSet } from "../GameSet";
+import { LinkmanItem } from "./LinkmanItem";
+import LocalStorage from "../../utils/LocalStorage";
 
 
 export class rightsPanel extends Panel {
@@ -30,13 +33,15 @@ export class rightsPanel extends Panel {
     private page2: Node;
     private car_item:Node[];
     private getBtn:Button
-   
+    private buyBtn:Button
+    private page3: Node;
+    private linkmanList: AutoScroller;
     private page:number
     private timedata:number;
     private time:number;
 
     protected onLoad(): void {
-        this.CloseBy("panel/closeBtn");
+        this.CloseBy("closeBtn");
         this.page1 = this.find("panel/page1");
         this.ScrollView = this.find("panel/page1/ScrollView",AutoScroller);
         this.ScrollView.SetHandle(this.updateData.bind(this))  
@@ -47,6 +52,12 @@ export class rightsPanel extends Panel {
         this.page2 = this.find("panel/page2");
         this.getBtn = this.find("panel/page1/getBtn", Button)
         this.getBtn.node.on("click", this.onGet, this);
+        this.buyBtn = this.find("panel/page2/buyBtn", Button)
+        this.buyBtn.node.on("click", this.onBuy, this);
+        this.page3 = this.find("page3");
+        this.linkmanList = this.find("page3/list", AutoScroller);
+        this.linkmanList.SetHandle(this.updateLinkmanItem.bind(this));
+
         this.navBtns = this.find("navBar").children.concat();
         for (let btn of this.navBtns) {
             btn.on('toggle', this.onPage, this);
@@ -78,10 +89,13 @@ export class rightsPanel extends Panel {
         let page = this.navBtns.indexOf(toggle.node);
         if (page < 0 || page == this.page) return;
         this.page = page; 
+        this.page1.active = false;
+        this.page2.active = false;
+        this.page3.active = false;
         switch (this.page) {
             case 0:
-                this.page1.active = true;
-                this.page2.active = false;   
+                if(!PlayerData.rightsData || !PlayerData.rightsData.all_equities) return;
+                this.page1.active = true; 
                 let is_active =  Object.keys(PlayerData.rightsData.all_equities).length > 0
                 let is_get = PlayerData.rightsData.benefit_card.claimed_today
                 let is_can_get = is_active && is_get;
@@ -116,9 +130,26 @@ export class rightsPanel extends Panel {
 
                 break;
             case 1:
-                this.page1.active = false;
                 this.page2.active = true;
+                let server = GameSet.Server_cfg;
+                if(server && server.Mark){
+                    this.buyBtn.node.active = true; 
+                }else{
+                    this.buyBtn.node.active = false;
+                }
                 break;
+            case 2:
+                this.page3.active = true;
+                let widget: Widget = this.linkmanList.node.getChildByName("view").getComponent(Widget);
+                widget.updateAlignment();
+                let datas:StdShopowner[] = CfgMgr.GetShopownerList().concat();
+                let keyData:any = LocalStorage.GetPlayerData(PlayerData.playerIdKey, "LinkmanClick");
+                datas.sort((a:StdShopowner, b:StdShopowner)=>{
+                    let aNum:number = keyData && keyData[a.ID] || 0;
+                    let bNum:number = keyData && keyData[b.ID] || 0;
+                    return bNum - aNum;
+                })
+                this.linkmanList.UpdateDatas(datas);
             default:
                 break;
         }
@@ -159,8 +190,14 @@ export class rightsPanel extends Panel {
                 MsgPanel.Show("今日已领取")
             }
         }else{
-            MsgPanel.Show("欢迎前往战备营地平台购买")
+            // MsgPanel.Show("欢迎前往战备营地平台购买")
+            this.SetPage(2);
         }
+    }
+
+    private onBuy(){
+        // MsgPanel.Show("欢迎前往战备营地平台购买")
+        this.SetPage(2);
     }
 
     private onRoleInfoShow(event:EventTouch){
@@ -188,7 +225,7 @@ export class rightsPanel extends Panel {
     }
 
     protected update(dt: number): void {
-        if(Object.keys(PlayerData.rightsData.benefit_card.cards).length > 0){
+        if(PlayerData.rightsData && PlayerData.rightsData.benefit_card.cards && Object.keys(PlayerData.rightsData.benefit_card.cards).length > 0){
                 let seconds = this.time - PlayerData.GetServerTime();
                 if (seconds > 0) {
                     seconds -= dt;
@@ -219,5 +256,11 @@ export class rightsPanel extends Panel {
 
     protected onHide(...args: any[]): void {
         EventMgr.emit(Evt_Show_Scene, this.node.uuid);
+    }
+
+    private updateLinkmanItem(item: Node, data: StdShopowner) {
+        let linkmanItem = item.getComponent(LinkmanItem);
+        if (!linkmanItem) linkmanItem = item.addComponent(LinkmanItem);
+        linkmanItem.SetData(data);
     }
 }

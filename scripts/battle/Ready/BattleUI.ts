@@ -31,6 +31,7 @@ import { BuildingType } from '../../module/home/HomeStruct';
 import LocalStorage from '../../utils/LocalStorage';
 import { CopyToClip } from '../../Platform';
 import { MsgPanel } from '../../module/common/MsgPanel';
+import { LootVsPanel } from '../../module/loot/LootVsPanel';
 
 export class BattleUI extends Panel {
     protected prefab: string = 'prefabs/battle/BattleUI';
@@ -94,6 +95,8 @@ export class BattleUI extends Panel {
     private toBattle: boolean = false;
     private battleIdText: Label;
 
+    private shieldNode: Node;
+
     constructor() {
         super();
         this.slot2Hero = new Map<number, Hero>();
@@ -107,6 +110,7 @@ export class BattleUI extends Panel {
         AdaptBgTop(this.node);
         AdaptBgTop(this.find("Top/topBg"));
         this.battleNode = this.find("Bottom/battle");
+        this.shieldNode = this.find("Top/bg/left/shield");
 
         this.left = this.find("Left");
         // this.input = this.find("Left/EditBox").getComponent(EditBox);
@@ -182,7 +186,7 @@ export class BattleUI extends Panel {
 
     protected async onShow(...args: any) {
         EventMgr.on(Evt_HeroDeployed, this.onHeroDeployed, this);
-        EventMgr.on(Evt_SoldierAssignment, this.onHeroDeployed, this);
+
         EventMgr.on(Evt_RoleAttack, this.onHeroDeployed, this);
 
 
@@ -203,6 +207,8 @@ export class BattleUI extends Panel {
         this.battleNode.active = false;
         this.left.active = false;
 
+        this.shieldNode.active = PlayerData.fightState == FightState.PvP && PlayerData.LootPlayerData?.has_shield;
+
         //更新玩家信息
         {
             this.onHeroDeployed();
@@ -220,8 +226,8 @@ export class BattleUI extends Panel {
     protected onHide(...args: any[]): void {
 
         EventMgr.off(Evt_HeroDeployed, this.onHeroDeployed, this);
-        EventMgr.off(Evt_SoldierAssignment, this.onHeroDeployed, this);
         EventMgr.off(Evt_RoleAttack, this.onHeroDeployed, this);
+
 
         this.resultNode.active = false;
         this.isBattleResult = false;
@@ -250,6 +256,7 @@ export class BattleUI extends Panel {
 
         if (PlayerData.fightState == FightState.PvP) {
             LootPanel.Show();
+            if (PlayerData.LootMatchList.length > 0) LootVsPanel.Show();
             HomeLogic.ins.EnterMyHomeScene(undefined, false);
         }
         else if (PlayerData.fightState == FightState.PvE) {
@@ -262,6 +269,18 @@ export class BattleUI extends Panel {
     }
 
     protected update(dt: number): void {
+
+        if (this.shieldNode.active)
+        {
+            if(Date.now() - PlayerData.LootPlayerData.shield_end_time * 1000 < 0){
+                let seconds= PlayerData.LootPlayerData.shield_end_time - Date.now() / 1000;
+                this.shieldNode.getChildByName("time").getComponent(Label).string = DateUtils.SecondsToHourTime(seconds);
+            }
+            else
+            {
+                this.shieldNode.active = false;
+            }
+        }
 
         if (this.battleStartTime > 0) {
             const continueTime = DateUtils.timeElapsedSince(this.battleStartTime);
@@ -474,10 +493,9 @@ export class BattleUI extends Panel {
                     season_id: BattleReadyLogic.ins.defID2HomeId[3],
                     is_revenge: BattleReadyLogic.ins.defID2HomeId[2] != null,
                     assist_role_id: BattleReadyLogic.ins.assistRoleId,
+                    version: BattleLogic.version
                 }
             }
-            console.log(BattleReadyLogic.ins.defID2HomeId[2] == null);
-            console.log(BattleReadyLogic.ins.defID2HomeId[2]);
             Session.Send(sendData, MsgTypeSend.Plunder, 5000);
         }
         else if (PlayerData.fightState == FightState.PvE) {
@@ -509,7 +527,8 @@ export class BattleUI extends Panel {
             this.resultNode.getChildByPath('bg/lose').active = !isWin;
             this.resultNode.getChildByPath('btn/lose').active = !isWin;
             this.resultNode.getChildByPath('btn/win').active = isWin;
-            let type = PlayerData.fightState == FightState.PvP ? "pvp" : "pve";
+            //let type = PlayerData.fightState == FightState.PvP ? "pvp" : "pve";
+            let type = "pve";
             if (isWin)
                 this.WinShow(type);
             else
@@ -531,6 +550,7 @@ export class BattleUI extends Panel {
 
     private async BattleStartPush(data: any) {
         Logger.log('--------->>>>>>>>>BattleStartPush', data);
+        if(BattleLogic.ins?.isBattleStart) return;
 
         HomeScene.ins.VisibleBuilding(BuildingType.cheng_qiang, false);
         HomeScene.ins.VisibleBuilding(BuildingType.fang_yu_ta, false);
@@ -538,6 +558,8 @@ export class BattleUI extends Panel {
         this.onToggleChange(this.bgmToggle, true);
         this.onToggleChange(this.soundToggle, true);
         this.battleIdText.string = "";
+        this.shieldNode.active = false;
+        PlayerData.LootMatchList = []; //清空搜索列表
 
         let attackerData;
         if (data.battle_type == "plunder") {
@@ -703,8 +725,7 @@ export class BattleUI extends Panel {
                     occupation_rate: this.GetOccupationRate(2),
                     is_finished: true,
                     result: data.result,
-                    //version: BattleLogic.ins?.version
-                    //report: this._resultReport,
+                    report: JSON.stringify(this._resultReport),
                 },
             }
         }

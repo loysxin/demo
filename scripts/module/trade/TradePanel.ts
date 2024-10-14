@@ -1,4 +1,4 @@
-import { Button, Component, EditBox, EventTouch, Input, Label, Layout, Node, ScrollView, Sprite, SpriteFrame, Toggle, Tween, TweenSystem, UITransform, debug, find, instantiate, path, sp, tween, view } from "cc";
+import { Button, Component, EditBox, EventTouch, Input, Label, Layout, Node, ScrollView, Sprite, SpriteFrame, Toggle, Tween, TweenSystem, UITransform, Widget, debug, find, instantiate, path, sp, tween, view } from "cc";
 import { Panel } from "../../GameRoot";
 import { AutoScroller } from "../../utils/AutoScroller";
 import PlayerData, { SQueryType, SPlayerData, SPlayerDataItem, SPlayerDataRole, SOonViewData, SOrderData, SOrderType, SSerchData, SQueryArgs, SQuerySortType, Tips2ID, SThing } from "../roleModule/PlayerData";
@@ -46,7 +46,8 @@ export class TradePanel extends Panel {
     private noneListCont:Node;
 
     private combox_item:Node;
-    private combox:Node;
+    private combox_open:Node;
+    private combox_close:Node;
     private item_name:Label
     private open:Node;
     private combox_item_bg:Node;
@@ -80,7 +81,8 @@ export class TradePanel extends Panel {
         this.right = this.find(`Main/pageBg/right`);
         this.heleBtn = this.find("Bg/heleBtn");
         this.combox_item = this.find("combox_item");
-        this.combox = this.find("combox_item/combox");
+        this.combox_open = this.find("combox_item/combox/open");
+        this.combox_close = this.find("combox_item/combox/close");
         this.item_name = this.find("combox_item/combox/item_name",Label);
         this.open = this.find("combox_item/combox/open");
         this.combox_item_bg = this.find("combox_item/combox_item_bg");
@@ -96,8 +98,11 @@ export class TradePanel extends Panel {
     private onBtnEvent() {
         this.heleBtn.on(Input.EventType.TOUCH_END, this.onHelpBtn, this);
         this.btnSort.on(Input.EventType.TOUCH_END, this.onTouchSort, this);
-        this.combox.on(Input.EventType.TOUCH_END, this.onOpen, this);
+        this.combox_open.on(Input.EventType.TOUCH_END, this.onOpenComboxItem, this);
+        this.combox_close.on(Input.EventType.TOUCH_END, this.onCloseComboxItem, this);
         this.serch.getChildByName(`EditBox`).on(EditBox.EventType.EDITING_DID_ENDED, this.onEditEnd, this)
+        this.serch.getChildByName(`EditBox`).on(EditBox.EventType.EDITING_DID_BEGAN, this.onEditBegan, this)
+        
         //订单单选
         this.toggleOrder.children.forEach((node, index) => {
             node.on(Input.EventType.TOUCH_END, () => {
@@ -183,6 +188,13 @@ export class TradePanel extends Panel {
         this.SortQArgs.init = 0;
         this.TimeLock = 0;
         this.combox_item_bg.active = false
+        for (let index = 0; index < this.content.children.length; index++) {
+            const element = this.content.children[index];
+            element.getChildByPath("layout/content").removeAllChildren();
+            element.getChildByPath("layout/input/open").active = true;
+            element.getChildByPath("layout/input/close").active = false;
+        }
+        this.onCloseComboxItem();
         this.onSetScrollGroupData(0)
     }
 
@@ -206,6 +218,10 @@ export class TradePanel extends Panel {
         this.SortQArgs = {};
         this.setScrollView();
         this.SendSessionView();
+        if(index != GroupType.Order){
+            this.onCloseComboxItem();
+            this.item_name.string = "道具";
+        }
     }
 
     private setScrollView() {
@@ -233,7 +249,7 @@ export class TradePanel extends Panel {
 
     public SendSessionView(page: number = 1) {
         //页面切换筛选重置
-        this.SortQArgs.selection_time_lock = null;
+        this.SortQArgs = {};
         this.TimeLock = 0;
         let index = this.selectGroup;
         let seleType = this.selectType;
@@ -273,27 +289,32 @@ export class TradePanel extends Panel {
             default:
                 break;
         }
-        this.SendSerchViewByThingType(queryType, queryArgs, page, this.pageSize, orderType);
+        this.SortQArgs = queryArgs;
+        this.SortQueryType = queryType
+        console.log("页面切换", queryType, this.SortQArgs, page)
+        this.SendSerchViewByThingType(queryType, this.SortQArgs, page, this.pageSize, orderType);
     }
 
     /**筛选排序 */
     public SendSortOrSerch(page = 1, type?: SQueryType, QArgs?: SQueryArgs) {
         //左右切页保留筛选排序
-        if (type != null) this.SortQueryType = type;
+        if (type != null){
+            this.SortQueryType = type;
+        } 
         if (QArgs != null) this.SortQArgs = QArgs;
         if (type == SQueryType.ThingType) {
             switch (this.selectType) {
                 case 0:
-                    QArgs.thing_type = ThingType.ThingTypeItem
+                    this.SortQArgs.thing_type = ThingType.ThingTypeItem
                     break;
                 case 1:
-                    QArgs.thing_type = ThingType.ThingTypeRole
+                    this.SortQArgs.thing_type = ThingType.ThingTypeRole
                     break;
                 case 2:
-                    QArgs.thing_type = ThingType.ThingTypeResource
+                    this.SortQArgs.thing_type = ThingType.ThingTypeResource
                     break;
                 case 3:
-                    QArgs.thing_type = ThingType.ThingTypeEquipment
+                    this.SortQArgs.thing_type = ThingType.ThingTypeEquipment
                     break;
             }
         }
@@ -317,6 +338,7 @@ export class TradePanel extends Panel {
             default:
                 break;
         }
+        console.log("左右切页", this.SortQueryType, this.SortQArgs, page)
         this.SendSerchViewByThingType(this.SortQueryType, this.SortQArgs, page, this.pageSize, orderType); 
     }
 
@@ -337,18 +359,21 @@ export class TradePanel extends Panel {
 
     onGetViewData(data: SOonViewData) {
         if (data.page_index > data.page_last_index && data.page_last_index != 0) {
-            if (this.TimeLock) {
+            // if (this.TimeLock) {
+                this.curPage = data.page_last_index;
                 return this.SendSortOrSerch(data.page_last_index);
-            } else {
-                return this.SendSessionView(data.page_last_index);
-            }
+            // } else {
+            //     return this.SendSessionView(data.page_last_index);
+            // }
         }
+        console.log("this.TimeLock", this.TimeLock)
         if (data.query_args.selection_time_lock) {
             this.TimeLock = data.query_args.selection_time_lock;
             this.SortQArgs.selection_time_lock = this.TimeLock;
         }
         this.curPage = data.page_index;
-        let datas = data.order_list;
+        // let datas = data.order_list;
+        let  datas = PlayerData.getOrderListData(data.order_list);    
         this.pageLabel.string = `${data.page_index}/${data.page_last_index || 1}`;
         if (data.page_last_index <= 0) { this.pageLabel.string = `1/1` };
         if (this.selectGroup == 2) {//订单页面
@@ -365,15 +390,19 @@ export class TradePanel extends Panel {
             }
             this.scrollItem.UpdateDatas(datas);
         }
-        this.scrollItem.ScrollToHead();
-        this.scrollOrder.ScrollToHead();
+       this.scheduleOnce(()=>{
+           this.scrollItem.ScrollToHead();
+           this.scrollOrder.ScrollToHead();
+       }, 0.01)
     }
 
     onGetSerchData(data: SSerchData) {
         this.pageLabel.string = `1/1`;
-        let datas = data.order_list || [];
+        // let datas = data.order_list || [];   
+        let datas = data.order_list ? PlayerData.getOrderListData(data.order_list) : [];
+        
         this.selectType = 0;
-        this.selectGroup = 0;
+        // this.selectGroup = 0;
         this.setScrollView();      
         if (datas){
             this.scrollItem.UpdateDatas(datas);
@@ -420,10 +449,16 @@ export class TradePanel extends Panel {
     }
    
 
-    private onOpen(){
-        let is_show = this.combox_item_bg.active
-        this.open.angle = is_show ? 0 : 180;
-        this.combox_item_bg.active = !is_show;
+    private onOpenComboxItem(){
+        this.combox_open.active = false;
+        this.combox_close.active = true;
+        this.combox_item_bg.active = true;
+    }
+
+    private onCloseComboxItem(){
+        this.combox_open.active = true;
+        this.combox_close.active = false;
+        this.combox_item_bg.active = false;
     }
 
     //打开2级列表
@@ -443,6 +478,7 @@ export class TradePanel extends Panel {
         this.item_name.string = item.getChildByPath("layout/input/label").getComponent(Label).string;
         //选中后修改展示数据
         this.onSetScrollItemData(this.selectType);
+
         let bourseData:Bourse[] = item["bourseData"];
         //根据物品的类别细分到不同的组
         let group_id = [];
@@ -519,6 +555,7 @@ export class TradePanel extends Panel {
         let content = item.getChildByPath("layout/content")  
         content.removeAllChildren();
         let bourseData:Bourse[] = item["bourseData2"];
+        this.setectItemListName(bourseData);
         for (let index = 0; index < bourseData.length; index++) {
             const element = bourseData[index];
             let tag_item3 = instantiate(this.item_3);
@@ -542,6 +579,32 @@ export class TradePanel extends Panel {
         content.removeAllChildren();
     }
 
+
+     /**选中某组物品 */
+     private setectItemListName(data:Bourse[]){
+       
+        let bourseData:Bourse[] = data;
+        let ids = []
+        let QArgs: SQueryArgs = {};
+        let type = SQueryType.ThingType
+        if (this.selectType != 0 ) {
+            Tips.Show("暂不支持角色和资源搜索")
+        } else  {//筛选道具
+            type = SQueryType.ItemType; 
+            for (let index = 0; index < bourseData.length; index++) {
+                const element = bourseData[index];                
+                ids.push(element.ItemId);     
+            }
+            QArgs.item_selection = ids;
+        }
+
+        if (ids.length > 0) {//筛选或者排序有已选项，发送查询协议
+            console.log(`发送协议查询！`, QArgs);
+            this.SendSortOrSerch(1, type, QArgs);
+        }
+    
+    }
+
     /**选中某个物品 */
     private setectItemName(event:EventTouch){
         let item = event.target;
@@ -562,6 +625,15 @@ export class TradePanel extends Panel {
             this.SendSortOrSerch(1, type, QArgs);
         }
     
+    }
+
+    private onEditBegan(){
+        //编辑时文本会发生偏移在输入时刷新一次对齐
+        this.serch.children.forEach((node)=>{
+            if(node.getComponent(Widget)){
+                node.getComponent(Widget).updateAlignment();
+            }
+        })
     }
 
     /**搜索栏事件 */
@@ -607,7 +679,7 @@ export class TradePanel extends Panel {
     }
     
     private onTouchSort() {
-        SortPanel.Show(this.selectType);
+        SortPanel.Show(this.selectType, this.SortQArgs);
     }
 
     public GetCopyCode() {

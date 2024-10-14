@@ -4,7 +4,7 @@ import PlayerData, { CountPower, FightState, PlayerDataMap, SAssistRoleInfo, SBa
 import { AutoScroller } from '../../utils/AutoScroller';
 import { HomeScene } from '../../module/home/HomeScene';
 import { BattleReadyLogic } from './BattleReadyLogic';
-import { BuildingType } from '../../module/home/HomeStruct'
+import { BuildingType, Node_Walk } from '../../module/home/HomeStruct';
 import Logger from '../../utils/Logger';
 import { SendOutTroopsPanel } from './SendOutTroopsPanel';
 import { Tips } from '../../module/login/Tips';
@@ -69,6 +69,7 @@ export class BattleArrayPanel extends Panel {
 
     private isWaitBattle;
     private battleBtnInfo: Label;
+    private shieldEffect: Node;
 
     protected async onLoad() {
         this.SetLink(undefined);
@@ -84,6 +85,7 @@ export class BattleArrayPanel extends Panel {
         this.midScroller.SetHandle(this.updateAttrItem.bind(this));
         this.skillLayout.SetHandle(this.onUpdateSkill.bind(this));
         this.find("roleInfoNode/TradeHeroPanel/close").on(Button.EventType.CLICK, this.onRoleInfoNode, this)
+        this.shieldEffect = this.find("panel/ready/bg/startBattle/shield");
 
 
         this.scroller = this.find("panel/ready/bg/chooseList", AutoScroller);
@@ -127,6 +129,7 @@ export class BattleArrayPanel extends Panel {
 
     public flush(fightType: number, selects: SBattleRole[], limit: number, isBattle: boolean, callBack?: Function, is_show_role_info?: boolean) {
         this.isShowFriend = fightType == FightState.PvP;
+        this.shieldEffect.active = fightType == FightState.PvP && PlayerData.LootPlayerData?.has_shield;
         this.battleBtnInfo.string = isBattle ? "开始战斗" : "保存";
         this.navBar.active = this.isShowFriend;
         this.limit = limit;
@@ -246,6 +249,13 @@ export class BattleArrayPanel extends Panel {
         if (currency_count < need_currency) {
             item.getComponent(Toggle).isChecked = false;
             Tips.Show("彩虹体不足，无法使用好友助战");
+            return;
+        }
+
+        let max_count = CfgMgr.GetCommon(StdCommonType.Friend).AssistNum
+        if (max_count <=  this.sort_friend_datas[index].friend.daily_assist_count) {
+            item.getComponent(Toggle).isChecked = false;
+            Tips.Show("好友助战次数耗尽，无法使用好友助战");
             return;
         }
         this.friend_all_select = 0;
@@ -466,7 +476,8 @@ export class BattleArrayPanel extends Panel {
                 power.string = data.friend.battle_power + ""
                 role_name.string = data.friend.player_name;
                 assist_cost.string = data.friend.usage_fee + "";
-                assist_count.string = data.friend.daily_assist_count + "";
+                let max_count = CfgMgr.GetCommon(StdCommonType.Friend).AssistNum
+                assist_count.string = (max_count - data.friend.daily_assist_count) + "";
             }
         }
 
@@ -623,6 +634,8 @@ export class BattleArrayPanel extends Panel {
                 break;
             }
         }
+        let count = BattleReadyLogic.ins.getUpBattleRole();
+        this.my_all_select = count.length - this.friend_all_select;
     }
 
     /**一键下阵 */
@@ -707,9 +720,7 @@ export class BattleArrayPanel extends Panel {
     //关闭
     protected OnReadyCloseClick(button: Button) {
         AudioMgr.PlayOnce(Audio_CommonClick);
-        if (PlayerData.fightState == FightState.PvP) {
-            if (PlayerData.LootMatchList.length > 0) LootVsPanel.ShowTop();
-        }
+
         BattleReadyLogic.ins.OnHide();
         this.Hide();
         BattleUI.Hide();
@@ -816,6 +827,12 @@ export class BattleArrayPanel extends Panel {
     }
 
     protected update(dt: number): void {
+        if(this.shieldEffect.active)
+        {
+            if(Date.now() - PlayerData.LootPlayerData.shield_end_time * 1000 >= 0)
+                this.shieldEffect.active = false;
+        }
+
     }
 
     protected onHide(...args: any[]): void {

@@ -1,5 +1,7 @@
-import { _decorator, CCBoolean, Color, Component, find, Input, instantiate, Label, Layout, Node, ScrollView, Toggle, ToggleContainer, UITransform, Vec2, Widget } from 'cc';
-import { Evt_Building_Upgrade_Complete, EventMgr } from '../../../manager/EventMgr';
+import { _decorator, Button, CCBoolean, Color, Component, find, Input, instantiate, Label, Layout, Node, ScrollView, Toggle, ToggleContainer, UITransform, Vec2, Widget } from 'cc';
+import { Evt_Building_Upgrade_Complete, EventMgr, Goto } from '../../../manager/EventMgr';
+import { Tips } from '../../login/Tips';
+import { PANEL_TYPE } from '../../../manager/UIGuide';
 const { ccclass, disallowMultiple, property, type } = _decorator;
 
 @ccclass('BaseNavPage')
@@ -27,6 +29,11 @@ export class BaseNavPage extends Component {
     private itemPool: Node[] = [];
     private static pageOffsets: { [uuid: string]: number } = {};
     private btnTiles: string[] = [];
+
+    _level: number = 0;
+    _name: string;
+    _levelBtn: Node;
+    
     protected onLoad(): void {
         this.content = this.node.getChildByPath("navBar/view/content");
         this.contentH = this.node.getComponent(UITransform).contentSize.height;
@@ -49,6 +56,16 @@ export class BaseNavPage extends Component {
             this.SetNav(this.btnTiles, [], ...this.pages);
         }
 
+        this._levelBtn = this.node.getChildByPath("frame/levelBtn");
+        this._levelBtn.on(Button.EventType.CLICK, () => {
+            if(this.buildingId <= 0 || this._level <= 0)
+            {
+                Tips.Show(this._name + "尚未解锁");
+                return;
+            }
+            Goto(PANEL_TYPE.BuildingUpgradePreviewPanel, this.buildingId, this._level, this._name);
+        },this)
+
         EventMgr.on(Evt_Building_Upgrade_Complete, this.updateLevel, this);
     }
 
@@ -61,7 +78,7 @@ export class BaseNavPage extends Component {
      * @param name 
      * @param level 
      */
-    SetTile(name: string, buildingId: number, level?: number) {
+    SetTile(name: string, buildingId: number, level?: number, preview: boolean = false) {
         this.buildingId = buildingId;
         this.buildName.string = name;
         if (level == undefined) {
@@ -69,10 +86,14 @@ export class BaseNavPage extends Component {
         } else {
             this.buildLevel.string = "Lv." + level;
         }
+        this._name = name;
+        this._level = level;
+        this._levelBtn.active = preview;
     }
     protected updateLevel(bulidingId: number, level: number) {
-        if (this.buildingId == this.buildingId) {
+        if (this.buildingId == bulidingId) {
             this.buildLevel.string = "Lv." + level;
+            this._level = level;
         }
     }
 

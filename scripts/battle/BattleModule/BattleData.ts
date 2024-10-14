@@ -13,6 +13,7 @@ export type Deployment =
         BattlePower: number,
         IsAssist: boolean,
         pos: LikeNode,
+        LeaderShip: number,
         Soldiers?: SBattleSoldier[],
     }
 

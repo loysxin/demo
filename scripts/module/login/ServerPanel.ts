@@ -68,7 +68,6 @@ export class ServerPanel extends Panel {
         this.privacyBtn.node.on(Button.EventType.CLICK, this.onBtnClck, this);
         this.userBtn.node.on(Button.EventType.CLICK, this.onBtnClck, this);
         this.find("relogin").active = false;
-        AudioMgr.PlayCycle(LoginSundBGM);
     }
     protected start(): void {
         let selector = this.find("Selector", Selector);
@@ -110,9 +109,12 @@ export class ServerPanel extends Panel {
     }
 
     protected onShow(): void {
+        AudioMgr.PlayCycle(LoginSundBGM);
     }
-    public flush(callBack: Function, reload?: boolean): void {
-        if (reload) {
+    public flush(callBack: Function, reload?: boolean, changeAccount?: boolean): void {
+        if (changeAccount) {
+            
+        } else if (reload) {
             CallApp({ api: Api_Login_Channel });
         } else if (!GetUserCode() && !this.pause) CallApp({ api: Api_Login_Channel });
         this.callback = callBack;

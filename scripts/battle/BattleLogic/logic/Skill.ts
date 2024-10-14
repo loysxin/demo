@@ -60,12 +60,12 @@ export class Skill {
         }
 
         let actionCfg = JSON.parse(JSON.stringify(Runtime.configManager.Get("action")[actionId]))
-        this.AddFrameEvent(actionCfg, endTime, this.blackboard.Animation, this.blackboard.Sound)
+        Skill.AddFrameEvent(actionCfg, endTime, this.blackboard.Animation, this.blackboard.Sound)
         this.action = new Action(actionCfg.FrameEvents, this.actor, this.blackboard);
     }
   }
 
-  private AddFrameEvent(action, endTime: number, animation?, sound?){
+  public static AddFrameEvent(action, endTime: number, animation?, sound?){
     let tickTimer = 0;
     action.FrameEvents.forEach(element => {
         tickTimer = Math.max(element.TimeTick, tickTimer);

@@ -16,7 +16,7 @@ import { TradePanel } from "../module/trade/TradePanel";
 import { GetGameData, SaveGameData } from "../net/MsgProxy";
 import { CfgMgr, StdGuide, StdRedPoint, StdStep, StdSystemOpen } from "./CfgMgr";
 import { CheckCondition } from "./ConditionMgr";
-import { EventMgr, Evt_ConfigData_Update, Evt_Guide_Close, Evt_Guide_Step, Evt_Tween_To } from "./EventMgr";
+import { EventMgr, Evt_ConfigData_Update, Evt_Guide_Close, Evt_Guide_Step, Evt_ReConnect, Evt_ResetConfig, Evt_Tween_To } from "./EventMgr";
 import { PointTo1 } from "../module/guide/PointTo1";
 import { PointTo2 } from "../module/guide/PointTo2";
 import { ResMgr, folder_common } from "./ResMgr";
@@ -35,7 +35,9 @@ import { ProductionPanel } from "../module/production/ProductionPanel";
 import { FishingPanel } from "../module/fishing/FishingPanel";
 import { ShopPanel } from "../module/shop/ShopPanel";
 import { rightsPanel } from "../module/rights/rightsPanel";
+import { FriendInviteListPanel } from "../module/friend/FriendInviteListPanel";
 import { RankPanel } from "../module/rank/RankPanel";
+import { BuildingUpgradePreviewPanel } from "../module/common/BuildingUpgradePreviewPanel";
 
 export const PANEL_TYPE = {
     JidiPanel: JidiPanel,
@@ -57,8 +59,9 @@ export const PANEL_TYPE = {
     FishingPanel: FishingPanel,
     ShopPanel: ShopPanel,//商城
     rightsPanel: rightsPanel,//权益卡
+    FriendInviteListPanel:FriendInviteListPanel,//好友邀请
     RankPanel:RankPanel,//排行榜
-
+    BuildingUpgradePreviewPanel:BuildingUpgradePreviewPanel,//建筑升级预览
 }
 
 /**建筑面板，自动判断指定建筑id是否已经开启 */
@@ -73,6 +76,7 @@ const BUILDING_PANEL = {
 export class UIGuide {
     constructor() {
         EventMgr.once(Evt_ConfigData_Update, this.init, this);
+        EventMgr.on(Evt_ResetConfig, this.resetDoors, this);
         EventMgr.on('ui_guide', this.fetch, this);
 
         if (DEV) {
@@ -178,6 +182,25 @@ export class UIGuide {
         }
 
         // 初始化系统开启
+        this.resetDoors();
+
+        EventMgr.on("update_guide", () => {
+            this.loop = 1;
+        }, this);
+        GameSet.RegisterUpdate(this.update, this);
+    }
+
+    protected resetDoors() {
+
+        // 更新所有系统入口
+        for (let k in this.syslst) {
+            let systemDoor = this.syslst[k];
+            systemDoor.update();
+            this.syslst[k].resetBtn();
+            delete this.syslst[k];
+        }
+
+        // 初始化系统开启
         let stdSys: { [key: string]: StdSystemOpen } = CfgMgr.GetSysOpenMap();
         for (let k in stdSys) {
             let std: StdSystemOpen = stdSys[k];
@@ -185,11 +208,6 @@ export class UIGuide {
                 this.syslst[panel] = new SystenDoor(std);
             }
         }
-
-        EventMgr.on("update_guide", () => {
-            this.loop = 1;
-        }, this);
-        GameSet.RegisterUpdate(this.update, this);
     }
 
     private loop = 1;

@@ -115,7 +115,7 @@ export class ItemTips extends Panel {
             let btn = item.getChildByName("btn_go")
             btn.off("click",)
             btn.on("click", ()=>{
-                if(data.Win == "ResourcesPanel" || data.Win == "JidiPanel" || data.Win == "SoldierProductionPanel"){
+                if(data.Win == "ResourcesPanel" || data.Win == "JidiPanel" || data.Win == "SoldierProductionPanel" || data.Win == "LootPanel" || data.Win == "PvePanel" ){
                     this.closeOther();
                 }
                 Goto(data.Win, ...data.Param);

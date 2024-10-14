@@ -148,7 +148,14 @@ export class MartialDisplay {
         else
             battle_attributes[SecondaryAttr.HPCur] = 50000;
         battle_attributes[SecondaryAttr.Vampire] = 0.1;
-
+        battle_attributes[SecondaryAttr.HitMeat] = 0.2;
+        battle_attributes[SecondaryAttr.BehitMeat] = 0.3;
+        battle_attributes[SecondaryAttr.HitWarrior] = 0.4;
+        battle_attributes[SecondaryAttr.BehitWarrior] = 0.5;
+        battle_attributes[SecondaryAttr.HitShooter] = 0.6;
+        battle_attributes[SecondaryAttr.BehitShooter] = 0.7;
+        battle_attributes[SecondaryAttr.HitAssist] = 0.8;
+        battle_attributes[SecondaryAttr.BehitAssist] = 0.9;
         return { battlePower: 0, values: battle_attributes};
     }
 

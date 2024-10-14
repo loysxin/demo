@@ -32,7 +32,7 @@ export class AssertPanel extends Panel {
     protected onShow(): void {
 
     }
-    public flush(msg: string, okCallBack?: Function, noCallBack?: Function): void {
+    public flush(msg: string, okCallBack?: Function, noCallBack?: Function, btn1Label?: string, btn2Label?: string): void {
         if (this.running) return;
         this.running = true;
         this.label.string = msg;
@@ -43,6 +43,12 @@ export class AssertPanel extends Panel {
             this.btn2.active = true;
         } else {
             this.btn2.active = false;
+        }
+        if (btn1Label) {
+            this.btn1.getChildByName("Label").getComponent(Label).string = btn1Label;
+        }
+        if (btn2Label) {
+            this.btn2.getChildByName("Label").getComponent(Label).string = btn2Label;
         }
     }
     protected onHide(...args: any[]): void {

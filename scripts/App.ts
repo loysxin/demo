@@ -33,6 +33,8 @@ import { CurrencyIncomModule } from "./module/currencyIncomInfo/CurrencyIncomMod
 import { rightsModule } from "./module/rights/rightsModule";
 import { GuildModule } from "./module/guild/GuildModule";
 import { HoverMgr } from "./HoverMgr";
+import { GetVersionName } from "./Platform";
+import { Session } from "./net/Session";
 
 let $gameApp: any;
 
@@ -56,7 +58,7 @@ export class App {
         if (DEV) {
             new LocalSet();
         }
-
+        window.send = Session.Send;
         // 加载
         // await HomeScene.load();
         // await HomeUI.load();
@@ -100,7 +102,13 @@ export class App {
         CircularDependency();
 
         LocalStorage.SetBool('isOpen', true);
-        if (!IOS) HoverMgr.creat();
+        if (!IOS) {
+            let versionName = GetVersionName();
+            let version = Number(versionName.split(".")[2]);
+            if (version < 19) {
+                HoverMgr.creat();
+            }
+        }
     }
 }
 

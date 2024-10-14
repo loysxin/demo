@@ -27,6 +27,7 @@ enum RodAnimType {
 export class FishingLakeCont extends FishingContBase {
     private lakeBg:Sprite;
     private rodModel:sp.Skeleton;
+    private rodModelHell:sp.Skeleton;
     private rodUpEffect:sp.Skeleton;
     private roleModel:sp.Skeleton;
     private thEffect:sp.Skeleton;
@@ -35,6 +36,7 @@ export class FishingLakeCont extends FishingContBase {
     private proBar:ProgressBar;
     private timeTitleSLab:Label;
     private roundCont:Node;
+    private typeIcon:Sprite;
     private roundEffect:sp.Skeleton;
     private roundTimeTitleLab:Label;
     private timeLab:Label;
@@ -46,6 +48,7 @@ export class FishingLakeCont extends FishingContBase {
     private curAnimName:string;
     private rodType:number;
     public feedCont:Node;
+    private curRod:sp.Skeleton;
     //钓鱼动画信息 name：动画名称 loop是否循环播放 finishInfo动作完成后播放
     private rodAnimInfo:{[key: string]: {name:string, loop:boolean, finishCbType?:RodAnimType}} = BeforeGameUtils.toHashMapObj(
         RodAnimType.idle, {name:"idle", loop:true},
@@ -67,6 +70,7 @@ export class FishingLakeCont extends FishingContBase {
         this.lakeBg = this.node.getChildByPath("lakeBg").getComponent(Sprite);
         
         this.rodModel = this.node.getChildByName("rodModel").getComponent(sp.Skeleton);
+        this.rodModelHell = this.node.getChildByName("rodModelHell").getComponent(sp.Skeleton);
         this.rodUpEffect = this.node.getChildByName("rodUpEffect").getComponent(sp.Skeleton);
         this.roleModel = this.node.getChildByName("roleModel").getComponent(sp.Skeleton);
         this.thEffect = this.node.getChildByName("thEffect").getComponent(sp.Skeleton);
@@ -74,6 +78,7 @@ export class FishingLakeCont extends FishingContBase {
         this.feedEffect = this.node.getChildByPath("fishFeedCont/feedEffect").getComponent(sp.Skeleton);
         this.fishFeedLab = this.node.getChildByPath("fishFeedCont/fishFeedLab").getComponent(Label);
         this.roundCont = this.node.getChildByPath("roundCont");
+        this.typeIcon = this.node.getChildByPath("roundCont/typeIcon").getComponent(Sprite);
         this.roundEffect = this.node.getChildByPath("roundCont/roundEffect").getComponent(sp.Skeleton);
         this.proBar = this.node.getChildByPath("roundCont/proBar").getComponent(ProgressBar);
         this.timeTitleSLab = this.node.getChildByPath("roundCont/timeTitleSLab").getComponent(Label);
@@ -106,7 +111,19 @@ export class FishingLakeCont extends FishingContBase {
     protected updateCont(): void {
         this.thEffect.node.active = false;
         this.roleModel.node.active = true;
-        this.rodModel.node.active = true;
+        this.rodModel.node.active = false;
+        this.rodModelHell.node.active = false;
+        this.curRod = this.rodModel;
+        let typeIconUrl:string = "generalTypeIcon";
+        if(PlayerData.CurFishRoundInfo && PlayerData.CurFishRoundInfo.kill_type > 1){
+            typeIconUrl = "hellTypeIcon";
+            this.curRod = this.rodModelHell;
+        }
+        this.curRod.node.active = true;
+        typeIconUrl = path.join("sheets/fishing", typeIconUrl, "spriteFrame");
+        ResMgr.LoadResAbSub(typeIconUrl, SpriteFrame, res => {
+            this.typeIcon.spriteFrame = res;
+        });
         if(!PlayerData.fishData || !PlayerData.fishData.player) return;
         this.lakeBg.node.active = false;
         this.lakeNameLab.string = "???";
@@ -192,7 +209,7 @@ export class FishingLakeCont extends FishingContBase {
                 break;
             case FishRoundState.Settle:
                 this.roleModel.node.active = false;
-                this.rodModel.node.active = false;
+                this.curRod.node.active = false;
                 break;
             case FishRoundState.NoSelect:
                 this.PlayRoleAnim("Lie");
@@ -254,8 +271,8 @@ export class FishingLakeCont extends FishingContBase {
         let name:string = animInfo.name + rodType; 
         if(isForce || this.curAnimName != name){
             this.curAnimName = name;
-            this.rodModel.setAnimation(0, name, animInfo.loop);
-            this.rodModel.setCompleteListener(() => {
+            this.curRod.setAnimation(0, name, animInfo.loop);
+            this.curRod.setCompleteListener(() => {
                 if(animInfo.finishCbType){
                     this.playRodAnim(animInfo.finishCbType, true, cb);
                 }else if(cb != null){

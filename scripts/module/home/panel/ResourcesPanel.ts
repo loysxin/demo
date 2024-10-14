@@ -44,12 +44,14 @@ export class ResourcesPanel extends Panel {
         if (!buildingId) return;
         if (buildingId) this.buildingId = buildingId;
         let std = CfgMgr.GetBuildingUnLock(this.buildingId);
+        let levelPreview = false;
         if (std.BuildingType == BuildingType.cheng_qiang) {
             this.navPage.SetNav(["升级", "驻守"], [], this.lvPage, this.defensePage);
             this.pages = [this.lvPage, this.defensePage];
         } else if (std.BattleType == 2) {
             this.navPage.SetNav(["升级", "工作"], [], this.lvPage, this.workPage);
             this.pages = [this.lvPage, this.workPage];
+            levelPreview = true;
         } else if (std.BattleType == 1) {
             this.navPage.SetNav(["升级"], [], this.lvPage);
             this.pages = [this.lvPage];
@@ -60,7 +62,7 @@ export class ResourcesPanel extends Panel {
             Tips.Show(std.remark + "尚未解锁");
             return;
         }
-        this.navPage.SetTile(std.remark, buildingId, state.level);
+        this.navPage.SetTile(std.remark, buildingId, state.level, levelPreview);
         if (selectPage) {
             this.selectPage = this.selectPage;
         } else {

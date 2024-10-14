@@ -5,6 +5,8 @@ import { GuildAuditItem } from "./GuildAuditItem";
 import { ConsumeItem } from "../common/ConsumeItem";
 import { GuildPrivilegeItem } from "./GuildPrivilegeItem";
 import { GuildDonateItem } from "./GuildDonateItem";
+import { EventMgr, Evt_GuildChange } from "../../manager/EventMgr";
+import PlayerData from "../roleModule/PlayerData";
 
 
 
@@ -38,11 +40,17 @@ export class GuildDonatePanel extends Panel {
     }
     
     protected onShow(): void {
-        
+        EventMgr.on(Evt_GuildChange, this.onGuildChange, this);
     }
 
     protected onHide(...args: any[]): void {
-        
+        EventMgr.off(Evt_GuildChange, this.onGuildChange, this);
+    }
+    private onGuildChange():void{
+        if(!this.node.activeInHierarchy) return;
+        if(!PlayerData.MyGuild){
+            this.Hide();
+        }
     }
     private updateShow():void{
         let datas:any [] = [];

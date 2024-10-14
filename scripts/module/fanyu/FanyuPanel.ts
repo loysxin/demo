@@ -32,14 +32,14 @@ export class FanyuPanel extends Panel {
     static get ins(): FanyuPanel { return this.$instance; }
     private mainCard: FanyuCard;
     private otherCard: FanyuCard;
-    private body: sp.Skeleton;
-    private quality: Sprite;
-    private attrScroller: AutoScroller;
-    private fightScroller: AutoScroller;
-    private skillScroller: AutoScroller;
-    private skillRadioScroller: AutoScroller;
-    private radio: Label;
-    private okBtn: Sprite;
+    private Main_body: sp.Skeleton;
+    private Main_quality: Sprite;
+    private Main_attrScroller: AutoScroller;
+    private Main_fightScroller: AutoScroller;
+    private Main_skillScroller: AutoScroller;
+    private Main_skillRadioScroller: AutoScroller;
+    private Main_radio: Label;
+    private Main_okBtn: Sprite;
     private costLabel: Label;
     private addBtn: Node;
     private showNode: Node;
@@ -49,7 +49,7 @@ export class FanyuPanel extends Panel {
     private closeBtn: Node;
     private Lock: Node;
     private helpBtn1: Node;
-    private helpBtn2: Node;
+    private Main_helpBtn2: Node;
     //数据
     private upitems: string[] = [];
     private upitemNum: number[] = [];
@@ -60,7 +60,7 @@ export class FanyuPanel extends Panel {
     private TopY: number = 0;
     private friendData = [];
     //特效
-    private light: sp.Skeleton;
+    private Main_light: sp.Skeleton;
     private Energy: sp.Skeleton;
     private Egg: sp.Skeleton;
     private Merger: sp.Skeleton;
@@ -69,17 +69,17 @@ export class FanyuPanel extends Panel {
     protected onLoad() {
         this.closeBtn = this.find(`closeBtn`);
         this.helpBtn1 = this.find(`showUnselect/tipsBg/helpBtn`);
-        this.helpBtn2 = this.find(`Main/helpBtn`);
+        this.Main_helpBtn2 = this.find(`Main/helpBtn`);
         this.mainCard = this.find("Top/main").addComponent(FanyuCard);
         this.otherCard = this.find("Top/other").addComponent(FanyuCard);
-        this.body = this.find("Main/body", sp.Skeleton);
-        this.quality = this.find("Main/quality", Sprite);
-        this.attrScroller = this.find("Main/leftLayout", AutoScroller);
-        this.fightScroller = this.find("Main/rightLayout", AutoScroller);
-        this.skillScroller = this.find("Main/skills", AutoScroller);
-        this.skillRadioScroller = this.find("Main/skillLayout", AutoScroller);
-        this.radio = this.find("Main/radio", Label);
-        this.okBtn = this.find("Main/okBtn", Sprite);
+        this.Main_body = this.find("Main/body", sp.Skeleton);
+        this.Main_quality = this.find("Main/quality", Sprite);
+        this.Main_attrScroller = this.find("Main/leftLayout", AutoScroller);
+        this.Main_fightScroller = this.find("Main/rightLayout", AutoScroller);
+        this.Main_skillScroller = this.find("Main/skills", AutoScroller);
+        this.Main_skillRadioScroller = this.find("Main/skillLayout", AutoScroller);
+        this.Main_radio = this.find("Main/radio", Label);
+        this.Main_okBtn = this.find("Main/okBtn", Sprite);
         this.okBtn2 = this.find("showUnselect/okBtn");
         this.costLabel = this.find("Main/okBtn/layout/value", Label);
         this.addBtn = this.find(`Main/addBtn`);
@@ -88,7 +88,7 @@ export class FanyuPanel extends Panel {
         this.Top = this.find(`Top`);
         this.Lock = this.find(`Lock`);
 
-        this.light = this.find(`Main/light/spine`, sp.Skeleton);
+        this.Main_light = this.find(`Main/light/spine`, sp.Skeleton);
         this.Energy = this.find(`Top/ui_breed_Energy`, sp.Skeleton);
         this.Egg = this.find(`egg/ui_breed_egg`, sp.Skeleton);
         this.Merger = this.find(`ui_breed_Merger`, sp.Skeleton);
@@ -97,29 +97,30 @@ export class FanyuPanel extends Panel {
         this.mainCard.SetMain(true);
         this.otherCard.SetMain(false);
 
-        this.attrScroller.SetHandle(this.UpdateAttrItem.bind(this));
-        this.fightScroller.SetHandle(this.updateItem.bind(this));
-        this.skillScroller.SetHandle(this.updateSkillItem.bind(this));
-        this.skillRadioScroller.SetHandle(this.updateRadioItem.bind(this));
+        this.Main_attrScroller.SetHandle(this.UpdateAttrItem.bind(this));
+        this.Main_fightScroller.SetHandle(this.updateItem.bind(this));
+        this.Main_skillScroller.SetHandle(this.updateSkillItem.bind(this));
+        this.Main_skillRadioScroller.SetHandle(this.updateRadioItem.bind(this));
+        let thisObj = this;
         this.scheduleOnce(() => {
-            this.TopY = this.Top.getPosition().y;
+            thisObj.TopY = thisObj.Top.getPosition().y;
         })
 
-        this.okBtn.node.on(Input.EventType.TOUCH_END, this.onFanyu, this);
+        this.Main_okBtn.node.on(Input.EventType.TOUCH_END, this.onFanyu, this);
         this.okBtn2.on(Input.EventType.TOUCH_END, this.onFanyu, this);
         this.closeBtn.on(Input.EventType.TOUCH_END, this.Hide, this);
         this.mainCard.node.on(Input.EventType.TOUCH_END, this.onClickCard, this);
         this.otherCard.node.on(Input.EventType.TOUCH_END, this.onClickCard, this);
         this.addBtn.on(Input.EventType.TOUCH_END, this.onClickAdd, this);
         this.helpBtn1.on(Input.EventType.TOUCH_END, this.onHelpBtn, this);
-        this.helpBtn2.on(Input.EventType.TOUCH_END, this.onHelpBtn, this);
+        this.Main_helpBtn2.on(Input.EventType.TOUCH_END, this.onHelpBtn, this);
     }
 
     /**重置UI和数据 */
     public Reset() {
-        this.body.skeletonData = undefined;
-        this.quality.spriteFrame = undefined;
-        this.radio.string = 0 + "%"
+        this.Main_body.skeletonData = undefined;
+        this.Main_quality.spriteFrame = undefined;
+        this.Main_radio.string = 0 + "%"
         this.upitems = [];
         this.upitemNum = [];
         this.friend_ids = [];
@@ -138,13 +139,13 @@ export class FanyuPanel extends Panel {
 
     /**选择主卡 */
     private selectMainRole() {
-        let curRoles = CfgMgr.getFanyuMainRole();
+        let curRoles = PlayerData.getFanyuMainRole();
         SelectHeroPanel.SelectMerge(curRoles, [this.mainRole, this.otherRole], 2, this.selectCallBack.bind(this));
     }
 
     /**选择副卡 */
     private selectOrtherRole() {
-        let curRoles = CfgMgr.getFanyuOrtherRole(this.mainRole, this.std);
+        let curRoles = PlayerData.getFanyuOrtherRole(this.mainRole, this.std);
         SelectHeroPanel.SelectMerge(curRoles, [this.mainRole, this.otherRole], 2, this.selectCallBack.bind(this));
     }
 
@@ -153,9 +154,10 @@ export class FanyuPanel extends Panel {
             this.mainCard.SetData(selects[0]);
             this.mainRole = selects[0];
             let stds = CfgMgr.Get("role_quality");
+            let thisObj = this;
             stds.forEach((curStd) => {
-                if (curStd.MainRoleid == this.mainRole.type && this.mainRole.quality + 1 === curStd.RoleQuailty) {
-                    this.std = curStd;
+                if (curStd.MainRoleid == thisObj.mainRole.type && thisObj.mainRole.quality + 1 === curStd.RoleQuailty) {
+                    thisObj.std = curStd;
                 }
             })
             if (selects[1]) {
@@ -193,14 +195,14 @@ export class FanyuPanel extends Panel {
         let datas4: any[] = [];
         if (this.mainRole) {
             let prefab = CfgMgr.GetRole()[this.mainRole.type].Prefab;
-            this.body.skeletonData = await ResMgr.LoadResAbSub(path.join("spine/role_p", prefab, prefab), sp.SkeletonData);
-            this.body.setAnimation(0, `Idle`, true);
+            // this.Main_body.skeletonData = await ResMgr.LoadResAbSub(path.join("spine/role_p", prefab, prefab), sp.SkeletonData);
+            // this.Main_body.setAnimation(0, `Idle`, true);
             let url = path.join(folder_icon + "quality", CardQuality[this.std.RoleQuailty] + "_big", "spriteFrame");
-            this.quality.spriteFrame = await ResMgr.LoadResAbSub(url, SpriteFrame);
+            this.Main_quality.spriteFrame = await ResMgr.LoadResAbSub(url, SpriteFrame);
             //品质特效
             let lightPath = path.join("spine/effect", `ui_breed_Magic_${CardQuality[this.std.RoleQuailty]}`, `ui_breed_Magic_${CardQuality[this.std.RoleQuailty]}`);
-            this.light.skeletonData = await ResMgr.LoadResAbSub(lightPath, sp.SkeletonData);
-            this.light.setAnimation(0, "Loop", true);
+            // this.Main_light.skeletonData = await ResMgr.LoadResAbSub(lightPath, sp.SkeletonData);
+            // this.Main_light.setAnimation(0, "Loop", true);
 
             // 基础属性
             let stdNow = CfgMgr.GetRoleQuality(this.mainRole.type, this.mainRole.quality);
@@ -222,16 +224,18 @@ export class FanyuPanel extends Panel {
                 datas2.push(data);
             }
             if (stdNow) {
-                let str = `被动技能概率提升 数量<color=#49FF11><outline color=#000000 width=3>+${stdNow.PassiveSkillNumAdd[0]}~${stdNow.PassiveSkillNumAdd[1]}</outline></color>`;
-                this.Main.getChildByName(`skillBg`).getComponentInChildren(RichText).string = str
+                // let str = `被动技能概率提升 数量<color=#49FF11><outline color=#000000 width=3>+${stdNow.PassiveSkillNumAdd[0]}~${stdNow.PassiveSkillNumAdd[1]}</outline></color>`;
+                // this.Main.getChildByName(`skillBg`).getComponentInChildren(RichText).string = str
+                this.Main.getChildByName(`skillBg`).getChildByPath("Node/num").getComponent(Label).string = stdNow.PassiveSkillNumAdd[0] + "~" + stdNow.PassiveSkillNumAdd[1]
             }
             SpliceSolderNum(datas1);
 
-            this.radio.string = ToFixed(stdNow.BaseRate * 100, 2) + "%"
+            this.Main_radio.string = ToFixed(stdNow.BaseRate * 100, 2) + "%"
             datas3 = [this.mainRole.active_skills[0]];
+            let thisObj = this;
             stdNow.ActiveSkillUp.forEach((value, index) => {
                 if (value == 1) {
-                    datas3 = [this.mainRole.active_skills[index]];
+                    datas3 = [thisObj.mainRole.active_skills[index]];
                 }
             })
             datas4 = this.mainRole.passive_skills;
@@ -239,28 +243,39 @@ export class FanyuPanel extends Panel {
             // this.okBtn.grayscale = true;
             this.costLabel.node.parent.active = false;
         }
-        this.attrScroller.UpdateDatas(datas1);
-        this.fightScroller.UpdateDatas(datas2);
-        this.skillScroller.UpdateDatas(datas3);
-        this.skillRadioScroller.UpdateDatas(datas4);
+        this.Main_attrScroller.UpdateDatas(datas1);
+        this.Main_fightScroller.UpdateDatas(datas2);
+        this.Main_skillScroller.UpdateDatas(datas3);
+        this.Main_skillRadioScroller.UpdateDatas(datas4);
     }
 
     /**设置spine动画 */
     private setSpineAction() {
-        this.Energy.clearAnimations();
-        this.Egg.clearAnimations();
+        // this.Energy.clearAnimations();
+        // this.Egg.clearAnimations();
         this.Energy.setAnimation(0, `Loop`, true);
 
-        let spine_call_back = () => {
-            this.Egg.setAnimation(0, `Loop`, false);
-            this.Egg.setCompleteListener(() => {
-                this.Egg.setAnimation(0, `Start`, false);
-                this.Egg.setCompleteListener(() => {
-                    spine_call_back();
-                })
-            })
-        }
-        spine_call_back();
+        // tween(this.Egg)
+        // .repeatForever(
+        //     tween()
+        //     .call(() => {this.Egg.setAnimation(0, `Loop`, false);})
+        //     .delay(2)
+        //     .call(() => {this.Egg.setAnimation(0, `Start`, false);})
+        //     .delay(1.66)
+        // )
+        // .start();
+        this.Egg.setAnimation(0, `Loop`, true);
+        // let self = this;
+        // let spine_call_back = () => {
+        //     self.Egg.setAnimation(0, `Loop`, false);
+        //     self.Egg.setCompleteListener(() => {
+        //         self.Egg.setAnimation(0, `Start`, false);
+        //         self.Egg.setCompleteListener(() => {
+        //             spine_call_back();
+        //         })
+        //     })
+        // }
+        // spine_call_back();
     }
 
     private setMainMoveAction() {
@@ -278,13 +293,16 @@ export class FanyuPanel extends Panel {
             this.setSpineAction();
         } else {
             this.showNode.active = false;
+            // this.Egg.clearAnimations()
+            // Tween.stopAllByTarget(this.Egg);
             this.Egg.node.parent.active = false;
             this.Main.active = true;
-            mainOpacity.opacity = 0;
-            this.Main.setPosition(0, -100, 1);
-            tween(mainOpacity).to(1, { opacity: 255 }, { easing: easing.sineInOut }).start();
-            tween(this.Main).to(.5, { position: new Vec3(0, 0, 1) }, { easing: easing.sineInOut }).start();
-            tween(this.Top).to(.5, { position: new Vec3(0, 230, 1) }, { easing: easing.sineInOut }).start();
+            this.Top.position = new Vec3(0, 230, 1);
+            // mainOpacity.opacity = 0;
+            // this.Main.setPosition(0, -100, 1);
+            // tween(mainOpacity).to(1, { opacity: 255 }, { easing: easing.sineInOut }).start();
+            // tween(this.Main).to(.5, { position: new Vec3(0, 0, 1) }, { easing: easing.sineInOut }).start();
+            // tween(this.Top).to(.5, { position: new Vec3(0, 230, 1) }, { easing: easing.sineInOut }).start();
         }
     }
 
@@ -389,127 +407,83 @@ export class FanyuPanel extends Panel {
     }
 
     public OnMerge(role) {
-        // PlayerData.DelRole(this.otherRole.id);
-        // this.Top.active = false;
-        // this.Main.active = false;
-        // this.Merger.node.active = true;
-        // this.Aurora.node.active = true;
-        // this.Egg.node.parent.active = true;
-        // this.Merger.setCompleteListener(() => {
-        //     this.Egg.setCompleteListener(() => {
-        //         if (this.mainRole.quality == role.quality) {
-        //             ShowHeroPanel.ShowMerge(role);
-        //             this.ResetOther();
-        //         } else {
-        //             ShowHeroPanel.ShowMerge(role, this.mainRole);
-        //             this.ResetSelect();
-        //         }
-        //         this.Lock.active = false;
-        //         this.Top.active = true;
-        //         this.Main.active = true;
-        //         this.Egg.setAnimation(0, `Start`, false);
-        //     })
-        //     this.Merger.node.active = false;
-        //     this.Aurora.node.active = false;
-        //     this.Egg.setAnimation(0, `Break`, false);
-        // })
-        // this.Aurora.setCompleteListener(() => {
-        //     this.Aurora.setAnimation(0, `Loop`, false);
-        // })
-        // this.Merger.setAnimation(0, `animation`, false);
-        // this.Aurora.setAnimation(0, `Start`, false);
-
-
         PlayerData.DelRole(this.otherRole.id);
         this.Main.active = false;
         this.Top.active = true;
         this.friendData = [];
-        // this.Merger.node.active = true;
-        // this.Aurora.node.active = true;
         this.Egg.node.parent.active = true;
         this.Egg.setAnimation(0, `Start`, true);
         if (this.mainRole.quality == role.quality) {
-            AudioMgr.PlayOnce(Audio_FanyuFail);   
+            AudioMgr.PlayOnce(Audio_FanyuFail);
         } else {
-            AudioMgr.PlayOnce(Audio_FanyuSucc); 
+            AudioMgr.PlayOnce(Audio_FanyuSucc);
         }
 
+        let self = this;
         let action1 = () => {
-            tween(this.otherCard.node)
-                .to(0.17, { eulerAngles: new Vec3(0, 90, 0) })
+            tween(self.otherCard.node)
+                .to(0.17, { scale: new Vec3(0, 1, 1) })
                 .call(() => {
-                    this.otherCard.node.active = false;
-                    this.otherCard.node.eulerAngles = new Vec3(0, 0, 0);
+                    self.otherCard.node.active = false;
+                    self.otherCard.node.scale = new Vec3(1, 1, 1);
                 })
                 .start();
         }
 
         let action2 = (callback) => {
-            tween(this.Egg)
-                .call(()=>{this.Egg.setCompleteListener(() => {this.Egg.clearAnimations();})    
-                    this.Egg.setAnimation(0, `Break`, false);
+            tween(self.Egg)
+                .call(() => {
+                    // self.Egg.setCompleteListener(() => { self.Egg.clearAnimations(); })
+                    self.Egg.setAnimation(0, `Break`, false);
                 })
                 .delay(1.66)
                 .call(() => {
-                    if (this.mainRole.quality == role.quality) {
-                        ShowHeroPanel.ShowMerge(role, null, callback);   
+                    if (self.mainRole.quality == role.quality) {
+                        ShowHeroPanel.ShowMerge(role, null, callback);
                     } else {
-                        ShowHeroPanel.ShowMerge(role, this.mainRole, callback);
+                        ShowHeroPanel.ShowMerge(role, self.mainRole, callback);
                     }
-                    this.Aurora.node.active = false;
+                    self.Aurora.node.active = false;
                 })
                 .start();
         }
         //卡牌1/6秒反转90度
-        tween(this.mainCard.node)
-            .to(0.17, { eulerAngles: new Vec3(0, 90, 0) })
+        tween(self.mainCard.node)
+            .to(0.17, { scale: new Vec3(0, 1, 1) })
             .call(() => {
-                this.mainCard.node.active = false;
-                this.mainCard.node.eulerAngles = new Vec3(0, 0, 0);
-                this.Merger.setCompleteListener(() => {
-                    this.Merger.node.active = false;
+                self.mainCard.node.active = false;
+                self.mainCard.node.scale = new Vec3(1, 1, 1);
+                self.Merger.setCompleteListener(() => {
+                    self.Merger.node.active = false;
                 })
-                this.Merger.node.active = true;
-                this.Merger.setAnimation(0, `animation`, false);
-                if (this.mainRole.quality == role.quality) {
-                    this.Aurora.node.active = false; 
+                self.Merger.node.active = true;
+                self.Merger.setAnimation(0, `animation`, false);
+                if (self.mainRole.quality == role.quality) {
+                    self.Aurora.node.active = false;
                 } else {
-                    this.Aurora.node.active = true;
-                    this.Aurora.setAnimation(0, `Start`, false);
+                    self.Aurora.node.active = true;
+                    self.Aurora.setAnimation(0, `Start`, false);
                 }
-               
+
             })
             .call(action1)
             .delay(1)
             .call(() => {
-                this.Top.active = false;
-                this.mainCard.node.active = true;
-                this.otherCard.node.active = true;
+                self.Top.active = false;
+                self.mainCard.node.active = true;
+                self.otherCard.node.active = true;
                 let callback = () => {
-                    this.Top.active = true;
-                    this.Main.active = true;
-                    this.Lock.active = false;
-                    if (this.mainRole.quality == role.quality) {
-                        this.ResetOther();
+                    self.Top.active = true;
+                    self.Main.active = true;
+                    self.Lock.active = false;
+                    if (self.mainRole.quality == role.quality) {
+                        self.ResetOther();
                     } else {
-                        this.ResetSelect();
+                        self.ResetSelect();
                     }
                 }
                 action2(callback);
-                // this.Egg.setCompleteListener(() => {
-                //     if (this.mainRole.quality == role.quality) {
-                //         ShowHeroPanel.ShowMerge(role, null, callback);
-                //         // this.ResetOther();
-                //     } else {
-                //         ShowHeroPanel.ShowMerge(role, this.mainRole, callback);
-                //         // this.ResetSelect();
-                //     }
-                //     this.Egg.clearAnimations();
-                // })
-                // this.Egg.setAnimation(0, `Break`, false);
             })
-            // .delay(1.3)
-            // .call(() => { this.Aurora.setAnimation(0, `Loop`, true); })
             .start();
 
     }
@@ -548,7 +522,7 @@ export class FanyuPanel extends Panel {
         this.upitems = upitems;
         this.upitemNum = upitemNums;
         this.friend_ids = friendIds;
-        this.radio.string =ToFixed(radio, 2) + "%"
+        this.Main_radio.string = ToFixed(radio, 2) + "%"
         this.friendData = friendData;
     }
 
@@ -562,23 +536,24 @@ export class FanyuPanel extends Panel {
             let stdNow = CfgMgr.GetRoleQuality(this.mainRole.type, this.mainRole.quality);
             if (PlayerData.roleInfo.currency >= stdNow.CoinCostNum) {
                 if (this.otherRole) {
-                    let callback = ()=>{
-                        this.Lock.active = true;
-                        this.Energy.node.active = false;
+                    let thisObj = this;
+                    let callback = () => {
+                        thisObj.Lock.active = true;
+                        thisObj.Energy.node.active = false;
                         let data = {
                             type: MsgTypeSend.MergeRoleRequest,
                             data: {
-                                role_id: this.mainRole.id,
-                                target_quality: this.std.RoleQuailty,
-                                consume_role_id: this.otherRole.id,
-                                up_item_ids: this.upitems,
-                                up_item_nums: this.upitemNum,
-                                friend_ids: this.friend_ids,
+                                role_id: thisObj.mainRole.id,
+                                target_quality: thisObj.std.RoleQuailty,
+                                consume_role_id: thisObj.otherRole.id,
+                                up_item_ids: thisObj.upitems,
+                                up_item_nums: thisObj.upitemNum,
+                                friend_ids: thisObj.friend_ids,
                             }
                         }
                         Session.Send(data, MsgTypeRet.MergeRoleRet)
                     }
-                    if(this.otherRole.level > 1 || this.mainRole.level > 1){
+                    if (this.otherRole.level > 1 || this.mainRole.level > 1) {
                         let time = LocalStorage.GetNumber("Fanyu" + PlayerData.roleInfo.player_id)
                         if (time) {
                             let isopen = DateUtils.isSameDay(time)
@@ -588,7 +563,7 @@ export class FanyuPanel extends Panel {
                             }
                         }
                         fanyuTips.Show(callback.bind(this));
-                    }else{
+                    } else {
                         callback();
                     }
                 }

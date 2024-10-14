@@ -8,6 +8,7 @@ import { formatNumber } from "../../utils/Utils";
 
 export class FishingResultCont extends FishingContBase {
     private tipsCont:Node;
+    private bottomBg:Sprite;
     private roleModel:sp.Skeleton;
     private tipsGetCont:Node;
     private tipsLab:Label;
@@ -37,6 +38,7 @@ export class FishingResultCont extends FishingContBase {
     private billItem:Node;
     private billNumLab:Label;
     protected onLoad(): void {
+        this.bottomBg = this.node.getChildByName("bottomBg").getComponent(Sprite);
         this.roleModel = this.node.getChildByPath("topCont/roleModel").getComponent(sp.Skeleton);
         this.tipsCont = this.node.getChildByName("tipsCont");
         this.tipsGetCont = this.node.getChildByPath("tipsCont/getCont");
@@ -78,6 +80,14 @@ export class FishingResultCont extends FishingContBase {
         
     }
     private updateResult():void{
+        let bottomUrl:string = "generalBottomBg";
+        if(PlayerData.CurFishRoundInfo && PlayerData.CurFishRoundInfo.kill_type > 1){
+            bottomUrl = "hellBottomBg";
+        }
+        bottomUrl = path.join("sheets/fishing", bottomUrl, "spriteFrame");
+        ResMgr.LoadResAbSub(bottomUrl, SpriteFrame, res => {
+            this.bottomBg.spriteFrame = res;
+        });
         if(!PlayerData.fishData) return; 
         let data:SFishingSettlementData = PlayerData.fishData.settlement;
         if(!data)return;
@@ -162,6 +172,7 @@ export class FishingResultCont extends FishingContBase {
         this.tipsCont.active = false;
         this.icedCont.active = false;
         this.roleModel.node.active = false;
+        
         Tween.stopAllByTarget(this.fishItem); 
         Tween.stopAllByTarget(this.vitItem); 
         Tween.stopAllByTarget(this.billItem); 

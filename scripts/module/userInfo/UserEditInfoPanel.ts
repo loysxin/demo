@@ -87,9 +87,9 @@ export class UserEditInfoPanel extends Panel {
         }else if(this.curType == EditType.Edit_QQ){
             this.titleLab.string = "编辑QQ号";
             this.editBox.placeholder = "请输入QQ号";
-            let myQQ:number = LocalStorage.GetPlayerData(`Player_${PlayerData.roleInfo.player_id}`, "UserQQ");
+            let myQQ:string = LocalStorage.GetPlayerData(`Player_${PlayerData.roleInfo.player_id}`, "UserQQ");
             if(myQQ){
-                this.editBox.string = myQQ.toString();
+                this.editBox.string = myQQ;
             }else{
                 this.editBox.string = "";
             }

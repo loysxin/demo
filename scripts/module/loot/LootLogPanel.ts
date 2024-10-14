@@ -1,4 +1,4 @@
-import { Node, Button, Label, find, path, SpriteFrame, Sprite } from "cc";
+import { Node, Button, Label, find, path, SpriteFrame, Sprite, JsonAsset } from "cc";
 import { Panel } from "../../GameRoot";
 import { MsgTypeRet, MsgTypeSend } from "../../MsgType";
 import { Session } from "../../net/Session";
@@ -6,7 +6,7 @@ import PlayerData, { FightState, SOpponentInfo, SPlunderRecordData, SQueryPlunde
 import { EventMgr, Evt_BuyPlunderTimes, Evt_LootGetPlayerBattleData, Evt_LootPlunderRecord } from "../../manager/EventMgr";
 import { AutoScroller } from "../../utils/AutoScroller";
 import { ResMgr, folder_head_round } from "../../manager/ResMgr";
-import { formatDate } from "../../utils/Utils";
+import { formatDate, SaveFile } from "../../utils/Utils";
 import { HomeUI } from "../home/panel/HomeUI";
 import { BattleReadyLogic } from "../../battle/Ready/BattleReadyLogic";
 import { LootPanel } from "./LootPanel";
@@ -16,6 +16,7 @@ import { Tips } from "../login/Tips";
 import { CopyToClip } from "../../Platform";
 import { MsgPanel } from "../common/MsgPanel";
 import { BattleLogic } from "../../battle/BattleLogic";
+import { CfgMgr } from "../../manager/CfgMgr";
 
 
 export class LootLogPanel extends Panel {
@@ -157,13 +158,20 @@ export class LootLogPanel extends Panel {
 
         playBackBtn.on(Button.EventType.CLICK, () => {
 
+            if(!this.checkVersion(PlunderRecordData.plunder_data.version))
+            {
+                MsgPanel.Show(CfgMgr.GetText("replay_1"));
+                return;
+            }
+
+
             let sendData = {
                 type: MsgTypeSend.QueryPlunderReplay,
                 data: {
                     battle_id: PlunderRecordData.plunder_data.battle_id,
                 }
             };
-            Session.Send(sendData);
+            Session.Send(sendData, MsgTypeSend.QueryPlunderReplay, 2000);
         });
 
         find("copyIdBtn", item).on(Button.EventType.CLICK, ()=>{
@@ -208,17 +216,53 @@ export class LootLogPanel extends Panel {
     }
 
     private onReplay(data) {
-        
-        if(data.version && data.version != BattleLogic.version) 
+
+        if(!this.checkVersion(data.plunder_data.version))
         {
-            MsgPanel.Show("录像版本不匹配，无法播放");
+            MsgPanel.Show(CfgMgr.GetText("replay_1"));
             return;
         }
+        
+        // if(!data.plunder_data.version || !BattleLogic.version)
+        // {
+        //     MsgPanel.Show(CfgMgr.GetText("replay_1"));
+        //     return;
+        // }
+
+        // // 提取前两个子串
+        // const getMajorMinor = (ver) => ver.split('.').slice(0, 2).join('.');
+
+        // let majorMinorVersion = getMajorMinor(BattleLogic.version);
+        // let majorMinorDataVersion = getMajorMinor(data.plunder_data.version);
+
+        // if(majorMinorVersion != majorMinorDataVersion)
+        // {
+        //     MsgPanel.Show(CfgMgr.GetText("replay_1"));
+        //     return;
+        // }
 
         this.Hide();
         HomeUI.Hide();
         LootPanel.Hide();
         data.exitType = 1
+        //SaveFile(JSON.stringify(data), data.plunder_data.battle_id + ".json");
         BattleReplayPanel.Show(data);
+    }
+
+    // 检查战斗版本
+    checkVersion(version){
+        if(!version || !BattleLogic.version)
+            return false;
+    
+        // 提取前两个子串
+        const getMajorMinor = (ver) => ver.split('.').slice(0, 2).join('.');
+
+        let majorMinorVersion = getMajorMinor(BattleLogic.version);
+        let majorMinorDataVersion = getMajorMinor(version);
+
+        if(majorMinorVersion != majorMinorDataVersion)
+            return false;
+
+        return true;
     }
 }

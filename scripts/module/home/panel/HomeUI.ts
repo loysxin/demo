@@ -1,7 +1,7 @@
 import { _decorator, Button, find, Input, Label, Node, path, Sprite, SpriteFrame, tween } from 'cc';
 import { Panel } from '../../../GameRoot';
 import { Convert, ConvertNode, ToFixed, formatNumber } from '../../../utils/Utils';
-import PlayerData, { SSimpleData } from '../../roleModule/PlayerData';
+import PlayerData,{ SPlayerViewInfo } from '../../roleModule/PlayerData';
 import { Tips } from '../../login/Tips';
 import { AddCollectTime } from './AddCollectTime';
 import { CfgMgr, ConditionType, ShopGroupId, StdCommonType, StdHomeLand, StdSysId, StdSystemOpen } from '../../../manager/CfgMgr';
@@ -201,7 +201,7 @@ export class HomeUI extends Panel {
         this.labelLayout.addChild(label.node);
         label.node.setPosition(x, y);
     }
-    private onHeadClick(data:SSimpleData):void{
+    private onHeadClick(data:SPlayerViewInfo):void{
         UserInfoPanel.Show(data);
     }
     
@@ -230,7 +230,7 @@ export class HomeUI extends Panel {
                 AddCollectTime.Show();
                 break;
             case this.rightsCardBtn:
-                rightsPanel.Show();
+               Goto(PANEL_TYPE.rightsPanel);
                 break;
             case this.shop:
                 ShopPanel.Show(ShopGroupId.BaseShop);
@@ -269,7 +269,7 @@ export class HomeUI extends Panel {
                 break;
             case this.rankBtn:
                 AudioMgr.PlayOnce(Audio_BottomClick);
-                RankPanel.Show();
+                Goto(PANEL_TYPE.RankPanel);
                 // MsgPanel.Show("系统暂未开放");
                 break;
             case this.friendBtn:
@@ -475,11 +475,12 @@ export class HomeUI extends Panel {
         this.updateFight();
         this.checkFishBtnState();
         this.leftLowerGroup.UpdateShow();
-        let data:SSimpleData = {
+        let data:SPlayerViewInfo = {
             player_id:PlayerData.roleInfo.player_id,
             name:PlayerData.roleInfo.name,
-            weChatNum:PlayerData.roleInfo.weChatNum,
-            qqNum:PlayerData.roleInfo.qqNum,
+            _weChatNumber:PlayerData.roleInfo.weChatNum,
+            _qqNumber:PlayerData.roleInfo.qqNum,
+            avatar_url:"0",
         };
         this.head.SetData(data);
         // this.updateBottonLock();

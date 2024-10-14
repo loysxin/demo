@@ -1,4 +1,4 @@
-import { Color, Mask, Node, Sprite, SpriteFrame, UITransform, game, sp } from "cc";
+import { Color, Mask, Node, Sprite, SpriteFrame, UITransform, find, game, sp } from "cc";
 import { IEntity } from "./entitys/IEntity";
 import { Building } from "./entitys/Building";
 import { BuildingType } from "./HomeStruct";
@@ -161,6 +161,7 @@ export class HomeLogic {
         }
         if (!PlayerData.GetHomeLand(homeId)) return;
         PlayerData.RunHomeId = homeId;
+        GameSet.intoGame = true;
 
         PlayerData.fightState = FightState.None;
         if (PlayerData.RunHomeId && PlayerData.RunHomeId != homeId && playEffect && !ChangeScenePanel.Showing) {
@@ -358,7 +359,7 @@ export class HomeLogic {
         SceneCamera.LookAt(node.x, node.y * 0.7);
 
         let mask = new Node();
-        mask.addComponent(Sprite).spriteFrame = await ResMgr.LoadResAbSub<SpriteFrame>("sheets/common/topMask/spriteFrame", SpriteFrame);
+        mask.addComponent(Sprite).spriteFrame = await ResMgr.LoadResAbSub<SpriteFrame>("sheets/common/di/spriteFrame", SpriteFrame);
         mask.setPosition(node.x, node.y + 1160);
         mask.layer = GameSet.Scenelayer;
         mask.setScale(1.5, 1.5, 1);

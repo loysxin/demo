@@ -1,5 +1,3 @@
-import { Building } from "./entitys/Building";
-
 export type BuildingLayout = {
     buildingId: number;
     type: number;
@@ -42,6 +40,12 @@ export type HomeLayout = {
     camera?: number;//战斗摄像头所处格子
     mapNode?: number[];//地图标点
     mapBaking?: string[]; //地图烘焙数据
+}
+
+export type SPlayerDataFusionStone = {
+    last_collect_efficiency:{[key:number]:number};
+    amount:{[key:number]:number};
+    last_collect_time: number;
 }
 
 export const Node_Walk = 0; //通路

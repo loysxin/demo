@@ -1,4 +1,4 @@
-import { Button, Label, Node, ProgressBar, RichText, Sprite, UIOpacity, UITransform } from "cc";
+import { Button, Label, Node, ProgressBar, RichText, Sprite, UIOpacity, UITransform, Vec3 } from "cc";
 import { Panel } from "../../GameRoot";
 import { EventMgr, Evt_GuildChange, Evt_GuildMenuShow, Evt_Hide_Scene, Evt_Show_Scene } from "../../manager/EventMgr";
 import { AutoScroller } from "../../utils/AutoScroller";
@@ -36,10 +36,12 @@ export class GuildMemberPanel extends Panel {
     protected onHide(...args: any[]): void {
         EventMgr.off(Evt_GuildMenuShow, this.onShowMenu, this);
         EventMgr.on(Evt_GuildChange, this.onGuildChange, this);
+        ClickTipsPanel.Hide();
     }
     private onGuildChange():void{
         if(!PlayerData.MyGuild){
             this.Hide();
+            
             return;
         }
         this.flush();

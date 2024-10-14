@@ -1,4 +1,4 @@
-import { _decorator, UITransform, Node, Toggle, Layout, HorizontalTextAlignment, Vec3, sp, path, ScrollView, instantiate, Vec2 } from 'cc';
+import { _decorator, UITransform, Node, Toggle, Layout, HorizontalTextAlignment, Vec3, sp, path, ScrollView, instantiate, Vec2, UIOpacity } from 'cc';
 import { Panel } from '../../GameRoot';
 import { SPlayerDataItem, SThing } from '../roleModule/PlayerData';
 import { AutoScroller } from '../../utils/AutoScroller';
@@ -23,6 +23,7 @@ export class RewardTips extends Panel {
     protected content: UITransform;
     protected scroller: ScrollView;
     private item: Node;
+    private effNode: UIOpacity;
 
     private data: (SPlayerDataItem | SThing)[]
     private isShowBox: boolean;
@@ -40,6 +41,7 @@ export class RewardTips extends Panel {
         this.initH = this.content.contentSize.height;
         this.scroller = this.find("ScrollView", ScrollView);
         this.item = this.find("ScrollView/view/content/item");
+        this.effNode = this.find("effNode",UIOpacity);
         this.initX = this.sureBtn.position.x;
         this.initY = this.sureBtn.position.y;
 
@@ -55,15 +57,15 @@ export class RewardTips extends Panel {
         this.eff_bg.node.active = !isShowBox;
         this.callBack = callBack;
         this.data = this.itemSort(datas);
+        this.effNode.opacity = 0;
         if (isShowBox) {
             AudioMgr.PlayOnce(Audio_BoxOpen);
             this.sureBtn.active = false;
-            this.eff_box.node.active = true;
             this.eff_box.skeletonData = await ResMgr.LoadResAbSub(path.join("spine/effect", "ui_TreasureChest_" + box_type, "ui_TreasureChest_" + box_type), sp.SkeletonData);
             this.eff_box.setTrackCompleteListener(this.eff_box.setAnimation(0, "Start", false), this.showEffect.bind(this))
+            this.effNode.opacity = 255;
         } else {
             this.sureBtn.position = new Vec3(this.initX, this.initY + this.eff_box.getComponent(UITransform).height / 2, 0);
-            this.eff_box.node.active = false;
             this.showEffect();
         }
     }

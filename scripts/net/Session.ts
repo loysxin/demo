@@ -7,6 +7,7 @@ import { ANDROID, DEV, EDITOR, HUAWEI, IOS } from "cc/env";
 import { AssertPanel } from "../module/login/AssertPanel";
 import { CfgMgr } from "../manager/CfgMgr";
 import { GameSet } from "../module/GameSet";
+import { CopyToClip } from "../Platform";
 
 const PingRet_Tick = 10000;
 
@@ -67,6 +68,15 @@ export class Session {
                     AssertPanel.Show("维护中...", () => {
                         game.end();
                     });
+                } else if (data.type == MsgTypeRet.VerifyTokenRet && data.code == 4) {
+                    AssertPanel.Show("此账号停用！", () => {
+                        game.end();
+                    });
+                } else if (data.type == MsgTypeRet.VerifyTokenRet && data.code == 5) {
+                    CopyToClip("https://www.pgyer.com/zhilingjueqi");
+                    AssertPanel.Show("此版本已停止维护，请点击复制链接，前往浏览器下载最新最新版本。", () => {
+                        game.end();
+                    }, null, "复制链接");
                 } else if (data.code == 555) {
                     AssertPanel.Show("您的账号已在其他地方登录");
                 } else {
@@ -82,7 +92,7 @@ export class Session {
 
         ws.onclose = function (ev) {
             if (ev.target != thisObj.socket) return;
-            console.log("onclose", ev);
+            console.log("onclose", ev, thisObj.closeHandle, GameSet.GateUrl && GameSet.Token);
             thisObj.closeTick = game.totalTime;
             clearInterval(Session.heartId);
             thisObj.socket.onmessage = undefined;
@@ -94,7 +104,7 @@ export class Session {
                 let handle = thisObj.closeHandle;
                 thisObj.closeHandle = undefined;
                 handle();
-            } if (AssertPanel.Showing) {
+            } else if (AssertPanel.Showing) {
 
             } else {
                 if (GameSet.GateUrl && GameSet.Token) {
@@ -128,18 +138,10 @@ export class Session {
     static get connectting() { return this.socket != undefined; }
 
     static closeHandle: Function;
-    static async Close(debug = false) {
+    static async Close(callBack?: Function) {
         if (this.socket) {
-            console.log("Close");
-            if (!debug) {
-                let thisObj = this;
-                let p = new Promise((resolve, reject) => {
-                    thisObj.closeHandle = resolve;
-                })
-                this.socket.close();
-                return p;
-            }
-            this.closeHandle = undefined;
+            console.log("Close", callBack);
+            this.closeHandle = callBack;
             this.socket.close();
         }
     }

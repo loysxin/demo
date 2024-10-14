@@ -1,8 +1,11 @@
 import { Component, Label, Node } from "cc";
-import PlayerData, { SFishingRankPlayerInfoData, SRankData, SRankType, SSimpleData } from "../roleModule/PlayerData";
+import PlayerData, { SFishingRankPlayerInfoData, SPlayerViewInfo, SRankData, SRankType } from "../roleModule/PlayerData";
 import { ItemUtil } from "../../utils/ItemUtils";
 import { CfgMgr, ThingType } from "../../manager/CfgMgr";
 import { HeadItem } from "../common/HeadItem";
+import { battle_1_config } from "../../battle/config/battle_1_config";
+import { Session } from "../../net/Session";
+import { MsgTypeSend } from "../../MsgType";
 
 export class RankItem extends Component {
     private head:HeadItem;
@@ -49,11 +52,10 @@ export class RankItem extends Component {
         }else{
             this.valueLab.string = this.data.progress + ""
         }
-        let data:SSimpleData = {
-            player_id:PlayerData.roleInfo.player_id,
-            name:PlayerData.roleInfo.name,
-            weChatNum:PlayerData.roleInfo.weChatNum,
-            qqNum:PlayerData.roleInfo.qqNum,
+        let data:SPlayerViewInfo = {
+            player_id:this.data.player_id,
+            level:this.data.level,
+            battle_power:this.data.battle_power,
         };
         this.head.SetData(data);
         

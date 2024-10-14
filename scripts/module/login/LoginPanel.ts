@@ -3,7 +3,7 @@ import { Panel } from "../../GameRoot";
 import { Tips } from "./Tips";
 import LocalStorage from "../../utils/LocalStorage";
 import { CfgMgr } from "../../manager/CfgMgr";
-import { GameSet, ServerCfg } from "../GameSet";
+import { GameSet } from "../GameSet";
 import { Selector } from "../../editor/skill/Selector";
 import { GetNickName, GetUserCode, hasSdk } from "../../Platform";
 import { AudioGroup, AudioMgr, LoginSundBGM, SoundDefine } from "../../manager/AudioMgr";
@@ -16,7 +16,6 @@ export class LoginPanel extends Panel {
 
     private selector: Selector;
     private input: EditBox;
-    protected selectServerCfg: ServerCfg;
     private callback: Function;
     protected async onLoad() {
         this.SetLink(undefined);
@@ -26,9 +25,11 @@ export class LoginPanel extends Panel {
 
         let host = LocalStorage.GetString("LocalServer", "http://192.168.0.118:7880");
         let list = CfgMgr.Get("server_list");
-
-        let selectServer = LocalStorage.GetNumber("prev_select_server", 0);//默认精英服
-        this.selectServerCfg = list ? list[selectServer] : undefined;
+        // if (ResMgr.HasResource("config/channel_cfg")) {
+        //     let jsonAsset = await ResMgr.LoadResAbSub("config/channel_cfg", JsonAsset);
+        //     list = jsonAsset.json.server_list;
+        //     host = list[0].Host;
+        // }
 
         GameSet.Local_host = host;
         console.log("LoginPanel.onLoad", GameSet.Local_host);
@@ -54,10 +55,7 @@ export class LoginPanel extends Panel {
         AudioMgr.PlayCycle(LoginSundBGM);
     }
 
-    protected onSelect(data: any, itemData?: any) {
-        if (itemData) {
-            this.selectServerCfg = itemData;
-        }
+    protected onSelect(data: any) {
         GameSet.Local_host = data.replace(/\(.*\)/, "");
         console.log("onSelect", GameSet.Local_host);
         LocalStorage.SetString("LocalServer", GameSet.Local_host);
@@ -92,15 +90,19 @@ export class LoginPanel extends Panel {
         } else {
             profiler.hideStats();
         }
+        let list = CfgMgr.Get("server_list");
+        for(let cfg of list){
+            if(cfg.Host == GameSet.Local_host){
+                GameSet.Server_cfg = cfg;
+                break;
+            }
+        }
+        if (GameSet.Server_cfg) {
+            CfgMgr.InitServerCfg(GameSet.Server_cfg.Mark);
+        }
         if (!userCode) {
             Tips.Show("请输入合法token");
         } else {
-            if (this.selectServerCfg) {
-                let list = CfgMgr.Get("server_list");
-                let index = list.indexOf(this.selectServerCfg);
-                if (index != -1) LocalStorage.SetNumber("prev_select_server", index);
-                CfgMgr.InitServerCfg(this.selectServerCfg.Mark);
-            }
             LocalStorage.SetString("userCode", userCode);
             window['usercode'] = GameSet.usecode;
             this.callback(userCode);

@@ -1,4 +1,4 @@
-import { _decorator, Component, find, Camera, UITransform, ViewGroup } from 'cc';
+import { _decorator, Component, find, Camera, UITransform, ViewGroup, profiler } from 'cc';
 import { ResMgr } from './manager/ResMgr';
 import { GameRoot } from './GameRoot';
 import { App } from './App';
@@ -25,15 +25,15 @@ export class Luanch extends Component {
             Luanch.instance.destroy();
         }
         Luanch.instance = this;
-        // profiler.hideStats();//隐藏左下角的调试信息
+        profiler.hideStats();//隐藏左下角的调试信息
 
-        let size = find("SceneCanvas/bg").getComponent(UITransform).contentSize;
+        let size = find("Canvas/bg").getComponent(UITransform).contentSize;
         console.log("Cavas.size", GameSet.SceneCanvasWidth, GameSet.SceneCanvasHeight);
         if (GameSet.SceneCanvasWidth > size.width || GameSet.SceneCanvasHeight > size.height) {
             let scale = Math.max(GameSet.SceneCanvasWidth / size.width, GameSet.SceneCanvasHeight / size.height);
-            find("SceneCanvas/bg").setScale(scale, scale);
+            find("Canvas/bg").setScale(scale, scale);
         } else {
-            find("SceneCanvas/bg").setScale(1, 1);
+            find("Canvas/bg").setScale(1, 1);
         }
         let data: SSettingData = LocalStorage.GetObject("Setting_Data");
         if (!data) {

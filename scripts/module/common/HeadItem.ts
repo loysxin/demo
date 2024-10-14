@@ -1,8 +1,10 @@
 import { Component, Sprite, Node, path, SpriteFrame, Button} from "cc";
-import PlayerData, { SSimpleData } from "../roleModule/PlayerData";
+import PlayerData, { SPlayerViewInfo } from "../roleModule/PlayerData";
 import { CfgMgr, StdHead } from "../../manager/CfgMgr";
 import { folder_head, folder_head_round, ResMgr } from "../../manager/ResMgr";
 import { EventMgr, Evt_UserInfoChange } from "../../manager/EventMgr";
+import { Session } from "../../net/Session";
+import { MsgTypeSend } from "../../MsgType";
 
 export class HeadItem extends Component {
     private headBg:Node;
@@ -10,9 +12,9 @@ export class HeadItem extends Component {
     private icon:Sprite;
     private frame:Sprite;
     private btn:Button;
-    private clickCb:(data: SSimpleData) => void = null;
+    private clickCb:(data: SPlayerViewInfo) => void = null;
     private isInit:boolean = false;
-    private _data:SSimpleData;
+    private _data:SPlayerViewInfo;
     protected onLoad(): void {
         this.headBg = this.node.getChildByName("headBg");
         this.frameBg = this.node.getChildByName("frameBg");
@@ -28,21 +30,26 @@ export class HeadItem extends Component {
         if(this.clickCb != null){
             return this.clickCb(this._data);
         }
+        if(!this.data) return;
         //点击自己
-        if(this._data.player_id == PlayerData.roleInfo.player_id) return;
+        if(this._data && this._data.player_id == PlayerData.roleInfo.player_id) return;
         // TODO 发送查看玩家数据
-        console.log("请求查看玩家数据");
+        Session.Send({ type: MsgTypeSend.GetPlayerViewInfo, 
+            data: {
+                player_id: this._data.player_id,
+            } 
+        });
     }
-    private onUserInfoChange(data:SSimpleData):void{
+    private onUserInfoChange(data:SPlayerViewInfo):void{
         if(!this.node.activeInHierarchy) return;
         if(this._data.player_id != data.player_id) return;
         this._data = data;
         this.updateShow();
     }
-    SetClickBc(clickCb:(data: SSimpleData) => void):void{
+    SetClickBc(clickCb:(data: SPlayerViewInfo) => void):void{
         this.clickCb = clickCb;
     }
-    SetData(data:SSimpleData) {
+    SetData(data:SPlayerViewInfo) {
         this._data = data;
         this.updateShow();
     }
@@ -51,14 +58,14 @@ export class HeadItem extends Component {
         if(!this.isInit || !this._data) return;
         this.headBg.active = false;
         this.frameBg.active = false;
-        let std:StdHead = CfgMgr.GetHead(this._data.headId || 4);
+        let std:StdHead = CfgMgr.GetHead(Number(this._data.icon_url) || 4);
         if(std){
             let headUrl = path.join(folder_head_round, std.IconRes, "spriteFrame");
             ResMgr.LoadResAbSub(headUrl, SpriteFrame, res => {
                 this.icon.spriteFrame = res;
             });
         }
-        std = CfgMgr.GetHead(this._data.headFarmerId);
+        std = CfgMgr.GetHead(Number(this._data.avatar_url));
         if(std){
             this.headBg.active = false;
             this.frameBg.active = true;
@@ -72,7 +79,7 @@ export class HeadItem extends Component {
         
     }
 
-    get data():SSimpleData{
+    get data():SPlayerViewInfo{
         return this._data;
     }
 }

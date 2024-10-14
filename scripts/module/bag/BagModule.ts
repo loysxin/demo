@@ -1,4 +1,5 @@
 import { MsgTypeRet } from "../../MsgType";
+import { PassiveSkill } from "../../battle/BattleLogic/logic/component/PassiveSkills";
 import { Item } from "../../editor/Item";
 import { CfgMgr } from "../../manager/CfgMgr";
 import { EventMgr, Evt_Compose, Evt_GetReward, Evt_Item_Change } from "../../manager/EventMgr";
@@ -8,7 +9,7 @@ import { RewardTips } from "../common/RewardTips";
 import { ShowHeroPanel } from "../common/ShowHeroPanel";
 import { CardType } from "../home/panel/Card";
 import { HomeUI } from "../home/panel/HomeUI";
-import PlayerData, { SPlayerDataRole, SThing } from "../roleModule/PlayerData";
+import PlayerData, { SPlayerDataRole, SPlayerDataSkill, SThing } from "../roleModule/PlayerData";
 
 export class BagModule {
     constructor() {
@@ -58,6 +59,29 @@ export class BagModule {
                     continue;
                 } else if (type == 5) {
                     let cfg = CfgMgr.GetRewardRoleById(id);
+
+                    //添加被动技能
+                    let passive_skills:SPlayerDataSkill[] = [];
+                    let cfg_role_type = CfgMgr.GetRole()[cfg.RoleType]
+                    if(cfg_role_type && cfg_role_type.PassiveGife){
+                        let passive_skill_data1:SPlayerDataSkill = {skill_id: cfg_role_type.PassiveGife, level:1}
+                        passive_skills.push(passive_skill_data1);
+                    }
+                    if(cfg_role_type && cfg_role_type.PassiveJob){
+                        let passive_skill_data2:SPlayerDataSkill = {skill_id: cfg_role_type.PassiveJob, level:1}
+                        passive_skills.push(passive_skill_data2);
+                    }
+
+                    let cfg_reward_role = CfgMgr.GetRewardRoleById(cfg.RoleType)
+                    if(cfg_reward_role && cfg_reward_role.PassiveId){
+                        let num = cfg_reward_role.PassiveId.length
+                        for (let index = 0; index < num; index++) {
+                            const element = cfg_reward_role.PassiveId[index];                            
+                            let passive_skill_data3:SPlayerDataSkill = {skill_id: element, level:1}
+                            passive_skills.push(passive_skill_data3);
+                        }
+                    }
+                    
                     awardList = ItemUtil.CreateThing(type, cfg.RoleType, data.reward_thing_count[index]);
                     awardList.role = {
                         id: "",
@@ -66,7 +90,7 @@ export class BagModule {
                         experience: 0,
                         soldier_num: 0,
                         active_skills: [],
-                        passive_skills: [],
+                        passive_skills: passive_skills,
                         is_in_building: false,
                         building_id: 0,
                         battle_power: 0,

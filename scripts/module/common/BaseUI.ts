@@ -176,7 +176,7 @@ export function FormatReward(rewardType: number, rewardId: number, value: number
             std = CfgMgr.Getitem(1);
             obj = {
                 icon: path.join(folder_icon, "caizuan/spriteFrame"),
-                name: "彩虹体",
+                name: std.ItemName,
                 value: value,
                 next: undefined,
                 per: "",
@@ -235,6 +235,18 @@ export function FormatReward(rewardType: number, rewardId: number, value: number
                 next: undefined,
                 per: "",
                 id: id,
+                quality: std.Quality ? CardQuality[std.Quality] : undefined,
+            }
+            break;
+        case ThingType.ThingTypeGemstone:
+            std = CfgMgr.Getitem(3);
+            obj = {
+                icon: path.join(folder_icon, "yuanshi/spriteFrame"),
+                name: std.ItemName,
+                value: value,
+                next: undefined,
+                per: "",
+                id: 3,
                 quality: std.Quality ? CardQuality[std.Quality] : undefined,
             }
             break;
@@ -580,46 +592,20 @@ export function FormatCardRoleAttr(roleType: number, roleQual: number = 1, roleL
     return newList;
 }
 
-
-
-export function GetAttrValueByIndex(role: SPlayerDataRole, index: number) {
-    let attrValue = 0; // 初始化属性值为0
-
-    // 处理标准等级属性
-    let stdlv = CfgMgr.GetRoleLevel(role.type, role.level);
-    if (stdlv.Attr) {
-        for (let i = 0; i < stdlv.Attr.length; i++) {
-            if (stdlv.Attr[i] === index) {
-                attrValue += stdlv.AttrValue[i];
-            }
-        }
+export function GetFightAttrValueByIndex(role: SPlayerDataRole, attrType: number):number {
+    let attrSubList:AttrSub[] = FormatRoleFightAttr(role);
+    for (let attrSub of attrSubList) {
+        if(attrSub.id == attrType) return attrSub.value;
     }
+    return 0;
+}
 
-    // 处理标准角色属性
-    let stdRole = CfgMgr.GetRole()[role.type];
-    if (stdRole && stdRole.Attr) {
-        for (let i = 0; i < stdRole.Attr.length; i++) {
-            if (stdRole.Attr[i] === index) {
-                attrValue += stdRole.AttrValue[i];
-            }
-        }
+export function GetAttrValueByIndex(role: SPlayerDataRole, attrType: number):number {
+    let attrSubList:AttrSub[] = FormatRoleAttr(role);
+    for (let attrSub of attrSubList) {
+        if(attrSub.id == attrType) return attrSub.value;
     }
-
-    // 处理标准品质属性
-    let stdQuality = CfgMgr.GetRoleQuality(role.type, role.quality);
-    if (stdQuality && stdQuality.Attr) {
-        for (let i = 0; i < stdQuality.Attr.length; i++) {
-            if (stdQuality.Attr[i] === index) {
-                attrValue += stdQuality.AttrValue[i];
-            }
-        }
-    }
-
-    if (index == Attr.LeaderShip && role.soldier_num)
-        attrValue += role.soldier_num;
-
-    // 返回累加后的属性值
-    return attrValue;
+    return 0;
 }
 
 
@@ -915,7 +901,7 @@ export function FormaThingCondition(thingType: number, id: number, num: number =
             break;
         case ThingType.ThingTypeGemstone:
             let stdGem = CfgMgr.Getitem(ThingItemId.ItemId_3);
-            data.name = stdGem.ItemName + "  " + ToFixed(PlayerData.roleInfo.currency3, 2) + "/" + BigNumber(num);
+            data.name = stdGem.ItemName + "  " + BigNumber(PlayerData.roleInfo.currency3, 2) + "/" + BigNumber(num);
             data.icon = path.join(folder_item, stdGem.Icon, "spriteFrame");
             if (PlayerData.roleInfo.currency3 < num) data.fail = stdGem.ItemName + "不足！";
             break;

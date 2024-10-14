@@ -69,6 +69,13 @@ export class CfgMgr {
         commList.length = 0;
         commList.push(...rliteList);
         console.log("InitServerCfg", JSON.stringify(CfgMgr.Get("Common")));
+
+        // 暂时屏蔽
+        // let Advister_list = this.Get("Advister_list");
+        // let Advister_list_Rlite = this.Get("Advister_list_Rlite");
+        // this.data["Advister_list"] = Advister_list_Rlite;
+        // console.log("InitServerCfg", JSON.stringify(this.Get("Advister_list")));
+        // this.aryToMap("Advister_list", "Ad_ID");
     }
 
     /**
@@ -260,7 +267,7 @@ export class CfgMgr {
      * @param homeId 
      * @returns 
      */
-    private static getBuildingsById(buildingId: number): { [level: number]: StdBuilding } {
+    public static GetBuildingsById(buildingId: number): { [level: number]: StdBuilding } {
         if (this.buildinglvMap[buildingId]) return this.buildinglvMap[buildingId];
         let lvs: StdBuilding[] = this.Get("BuildingUpgrade");
         for (let obj of lvs) {
@@ -275,7 +282,7 @@ export class CfgMgr {
     }
     /**获取家园最大等级 */
     public static GetHomeMaxLv():number{
-        let lvMap = this.getBuildingsById(BuildingType.ji_di);
+        let lvMap = this.GetBuildingsById(BuildingType.ji_di);
         let lv:number = 0;
         let std:StdBuilding;
         for (let key in lvMap) {
@@ -293,7 +300,7 @@ export class CfgMgr {
      */
     static GetMaxWorkerNum(buildingId: number) {
         if (this.maxWorkerNums[buildingId]) return this.maxWorkerNums[buildingId];
-        let lvs = this.getBuildingsById(buildingId);
+        let lvs = this.GetBuildingsById(buildingId);
         let max = [];
         for (let i = 1; ; i++) {
             let lv = lvs[i];
@@ -314,7 +321,7 @@ export class CfgMgr {
      */
     static GetMaxDefenseNum(buildingId: number) {
         if (this.maxDefenseNums[buildingId]) return this.maxDefenseNums[buildingId];
-        let lvs = this.getBuildingsById(buildingId);
+        let lvs = this.GetBuildingsById(buildingId);
         let max = [];
         for (let i = 1; ; i++) {
             let lv = lvs[i];
@@ -337,7 +344,7 @@ export class CfgMgr {
     static GetBuildingLv(buildingId: number, lv: number) {
         let std = this.GetBuildingUnLock(buildingId);
         if (!std || std.LevelMax < lv) return undefined;
-        let lvs = this.getBuildingsById(buildingId);
+        let lvs = this.GetBuildingsById(buildingId);
         if (lvs) return lvs[lv];
     }
 
@@ -486,6 +493,7 @@ export class CfgMgr {
      */
     static GetLevel(id: number): StdLevel {
         let cfg = this.Get("Level");
+        if(!cfg.hasOwnProperty(id)) return;
         let leveltable: StdLevel = cfg[id];
         let info: StdLevel = {
             ID: leveltable.ID,
@@ -1067,47 +1075,6 @@ export class CfgMgr {
         })
         return stdPVPData;
     }
-    /**获取可繁育主卡数据 */
-    static getFanyuMainRole() {
-        let stds: StdMerge[] = CfgMgr.Get("role_quality");
-        let roles = [];
-        for (let std of stds) {
-            for (let role of PlayerData.GetRoles()) {
-                if (role.type == std.Roleid && role.quality + 1 === std.RoleQuailty && role.building_id == 0 && !role.is_assisting) {
-                    roles.push(role);
-                }
-            }
-        }
-        let curRoles = [];
-        curRoles = roles.filter((item, index) => roles.indexOf(item) === index);
-        curRoles.sort((a: SPlayerDataRole, b: SPlayerDataRole) => {
-            if (a.passive_skills.length == b.passive_skills.length) {
-                return b.battle_power - a.battle_power;
-            } else {
-                return b.passive_skills.length - a.passive_skills.length;
-            }
-        })
-        return curRoles;
-    }
-    /**获取可繁育副卡数据 */
-    static getFanyuOrtherRole(mainRole, std) {
-        let roles = [];
-        for (let role of PlayerData.GetRoles()) {
-            if (std.OtherRoleid.indexOf(role.type) != -1 && mainRole.quality === role.quality && role.building_id == 0 && !role.is_assisting) {
-                roles.push(role);
-            }
-        }
-        let curRoles = [];
-        curRoles = roles.filter((item, index) => roles.indexOf(item) === index);
-        curRoles.sort((a: SPlayerDataRole, b: SPlayerDataRole) => {
-            if (a.passive_skills.length == b.passive_skills.length) {
-                return b.battle_power - a.battle_power;
-            } else {
-                return b.passive_skills.length - a.passive_skills.length;
-            }
-        })
-        return curRoles;
-    }
     static GetShop(id: number): StdShop {
         for (let std of this.GetShopList()) {
             if (std.ID == id) return std;
@@ -1265,8 +1232,13 @@ export class CfgMgr {
         return this.Get("guild_common")[0];
     }
     /**获取公会权限配置 */
-    static GetGuildRole(id:number):StdGuildRole{
+    static GetGuildRoleList():StdGuildRole[]{
         let roleList:StdGuildRole[] = this.Get("guild_role");
+        return roleList;
+    }
+    /**获取公会权限配置 */
+    static GetGuildRole(id:number):StdGuildRole{
+        let roleList:StdGuildRole[] = this.GetGuildRoleList();
         for (let std of roleList) {
             if(std.ID == id) return std;
         }
@@ -1277,7 +1249,7 @@ export class CfgMgr {
         for (let std of this.GetGuildLevelList()) {
             if(std.ID == id) return std;
         }
-        return null;
+        return this.GetGuildLevelList()[this.GetGuildLevelList().length - 1];
     }
     /** 获取公会等级列表配置*/
     static GetGuildLevelList():StdGuildLevel[]{
@@ -1309,6 +1281,119 @@ export class CfgMgr {
         return roleList[roleList.length - 1];
     }
 
+    /**获取公会类型列表 */
+    static GetGuildTypeList():StdGuildType[]{
+        return this.Get("guild_type");
+    }
+
+    /**获取公会类型 */
+    static GetGuildType(id:number):StdGuildType{
+        let list:StdGuildType[] = this.GetGuildTypeList();
+        let std:StdGuildType;
+        for (let index = 0; index < list.length; index++) {
+            std = list[index];
+            if(std.ID == id) return std;
+        }
+        return null;
+    }
+    /**获取公会银行储蓄类型列表 */
+    static GetGuildSavingsList(guildLv:number):StdGuildBank[]{
+        let list:StdGuildBank[] = this.Get("GuildBank");
+        let newList:StdGuildBank[] = [];
+        let std:StdGuildBank;
+        let oldVal:number = 0;
+        for (let i = 0; i < list.length; i++) {
+            std = list[i];
+            if(std.Guild_Level > guildLv){
+                return newList;
+            }
+            if(std.Guild_Level > oldVal){
+                newList.length = 0;
+            }
+            newList[newList.length] = std;
+            oldVal = std.Guild_Level;
+        }
+        return newList;    
+    }
+    /**获取公会银行储蓄类型 */
+    static GetGuildSavings(id:number):StdGuildBank{
+        let list:StdGuildBank[] = this.Get("GuildBank");
+        let std:StdGuildBank;
+        for (let i = 0; i < list.length; i++) {
+            std = list[i];
+            if(std.DonateId == id){
+                return std;
+            }
+        }
+        return null;    
+    }
+    /**获取公会银行储蓄颜色值 */
+    static GetGuildSavingsTypeColor(type:number):string[]{
+        if(type == GuildSavingsType.General){
+            return ["#5A7D30","#2E5A00"];
+        }else if(type == GuildSavingsType.High){
+            return ["#5A41A2","#5013AB"];
+        }else{
+            return ["#9B3A37","#C33301"];
+        }
+    }
+    /**获取公会银行储蓄利率*/
+    static GetGuildSavingsRate(id:number, type:number, postId:number):number{
+        let stdGuildBank:StdGuildBank = this.GetGuildSavings(id);
+        if(!stdGuildBank) return 0;
+        
+        let rate:number = stdGuildBank.MemberRebate;
+        for (let index = 0; index < stdGuildBank.guild_role.length; index++) {
+            let post = stdGuildBank.guild_role[index];
+            if(post == postId && stdGuildBank.TotalRebateRole.indexOf(postId) > -1){
+                rate += stdGuildBank.AddRebate[index];
+                break;
+            }
+        }
+        for (let index = 0; index < stdGuildBank.guild_type.length; index++) {
+            let guildType = stdGuildBank.guild_type[index];
+            if(guildType == type){
+                rate += stdGuildBank.Guild_Rebate[index];
+                break;
+            }
+        }
+        return rate / 10000 * 100;
+    }
+    /**获取公会银行储蓄人数总利率*/
+    static GetGuildSavingsTotalRate(id:number, curNum:number, isNext:boolean = false):number[]{
+        let stdGuildBank:StdGuildBank = this.GetGuildSavings(id);
+        if(!stdGuildBank) return null;
+        let rate:number = 0;
+        let num:number = 0;
+        let len:number = stdGuildBank.TotalRebateType.length;
+        for (let index = 0; index < len; index++) {
+            num = stdGuildBank.TotalRebateType[index];
+            if(isNext && curNum >= stdGuildBank.TotalRebateType[len - 1]){
+                return null;
+            }
+            if(num > curNum){
+                if(isNext){
+                    rate = stdGuildBank.TotalRebate[index];
+                } 
+                break;
+            }
+            rate = stdGuildBank.TotalRebate[index];
+        }
+        
+        return [num, rate / 10000 * 100];
+    }
+    /**获取公会权益列表*/
+    static GetGuildEquityList():StdGuildEquity[]{
+        return this.Get("guild_equity");
+    }
+    /**获取公会权益*/
+    static GetGuildEquity(id:number):StdGuildEquity{
+        let list:StdGuildEquity[] = this.GetGuildEquityList();
+        for (let std of list) {
+            if(std.ID == id) return std;
+        }
+        return null;
+    }
     /**获取权益配置 */
     static getEquityCardById(id:number){
         let equity_card:StdEquityCard[] = this.Get("Equity_card");
@@ -1322,6 +1407,20 @@ export class CfgMgr {
         let equity_list:StdEquityList[] = this.Get("Equity_list");
         for (let std of equity_list) {
             if(std.Equity_ID == id) return std;
+        }
+    }
+
+    /**获取联系渠道列表 */
+    static GetShopownerList(): StdShopowner[]{
+        let list: StdShopowner[] = CfgMgr.Get("Shopowner");
+        return list;
+    }
+
+    /**获取主基地工作配置 */
+    static GetProduceCasting(type:number, quality:number){
+        let produce_casting_list:StdProduceCasting[] = this.Get("produce_casting");
+        for (let std of produce_casting_list) {
+            if(std.Roleid == type && std.RoleQuailty == quality) return std;
         }
     }
 }
@@ -1470,6 +1569,7 @@ export type StdBuilding = {
     readonly ConstructDuration?: number; // 建筑升级耗时
     readonly WorkingRolesNum?: number;   // 允许最大的工人数量
     readonly DefenseRolesNum?: number;   //驻守上限
+    readonly RewardsPreview: number; //预览奖励（关联任务id）
 }
 
 
@@ -1807,7 +1907,8 @@ export type RewardBox = {
     readonly Items: number[];
     readonly ItemsNum: number[];
     readonly Probability: number[];
-    readonly Limit:number
+    readonly Limit:number;
+    readonly Text:string;
 }
 
 export enum StdCommonType {
@@ -2321,6 +2422,7 @@ export enum StdHomeId {
 //角色宝箱配置
 export type StdRewardRole = {
     readonly RewardID: number,//id
+    readonly RoleName: string,
     readonly RoleType: number,//角色类型
     readonly RoleLevel: number,//角色等级
     readonly RoleQuality: number,//角色品质
@@ -2418,17 +2520,17 @@ export enum OneOffRedPointId {
 }
 /**公会通用配置 */
 export type StdGuildComm = {
-    readonly CreateCostType: number[],//创建公会花费消耗类别
-    readonly CreateCostID: number[],//创建公会花费消耗ID
-    readonly CreateCostCount: number[],//创建公会花费消耗数量
     readonly NameMinLen: number,//公会名称最短长度
     readonly NameMaxLen: number,//公会名称最长长度
     readonly AnnouncementMaxLen: number,//公告最大长度
-    readonly LeaderRoleID: number;//会长角色类型
-    readonly ExitCdTime:number;//解散公会冷却时长（单位小时）
-    readonly RenameCostType: number[],//更改公会花费消耗类别
-    readonly RenameCostID: number[],//更改公会花费消耗类别
-    readonly RenameCostCount: number[],//更改公会花费消耗类别
+    readonly LeaderRoleID: number,//会长角色类型
+    readonly ExitCdTime:number,//解散公会冷却时长（单位小时）
+    readonly MessageLen:number,//心情留言字符限制
+    readonly PlayerApplicationsMaxCount:number,//单个玩家最大申请数量
+    readonly GuildApplicationsMaxCount:number,//单个公会最大申请数量
+    readonly ApplicationsExpirationTime:number,//申请过期时间 (秒)
+    readonly CreateGuildMinHomeLevel:number,//创建公会家园等级限制
+    readonly JoinGuildMinHomeLevel:number,//加入公会家家园等级限制
 
 }
 /**公会职位配置 */
@@ -2471,6 +2573,48 @@ export type StdGuildChangeName = {
     readonly CostID:number[], //修改公会名消耗ID
     readonly CostCount:number[],//修改公会名消耗数量
 }
+/**公会类型配置 */
+export type StdGuildType = {
+    readonly ID: number,//id 1普通公会 2荣耀公会 3殿堂公会
+    readonly Name:string;//类型名称
+    readonly CreateCostType: number[],//创建公会花费消耗类别
+    readonly CreateCostID:number[], //创建公会花费消耗ID
+    readonly CreateCostCount:number[],//创建公会花费消耗数量
+    readonly WarehouseIsOpen:number,//是否开启仓库功能
+    readonly TypeIconRes:string,//公会类型资源标记
+    readonly PrivilegeDescList:string[],//公会权益说明
+}
+/**公会银行配置 */
+export type StdGuildBank = {
+    readonly DonateId: number,//id 
+    readonly SavingsType:number,//储蓄类型
+    readonly Guild_Level:number,//解锁条件（公会等级）
+    readonly TypeIcon:string,//储蓄类型图标
+    readonly TypeBg:string,//储蓄类型底图资源
+    readonly CostType: number[],//储蓄上交货币类型
+    readonly CostId:number[], //储蓄上交货币Id
+    readonly CostNum:number[],//储蓄上交货币数量
+    readonly Duration:number,//持续时间（天）
+    readonly MemberRebate:number,//成员基础利息(利息默认万分比)
+    readonly guild_role:number[],//职位类型加成
+    readonly AddRebate:number[],//职位类型加成值基础利息(利息默认万分比)
+    readonly guild_type:number[],//公会类型加成
+    readonly Guild_Rebate:number[],//公会类型加成值基础利息(利息默认万分比)
+    readonly TotalRebateType:number[],//储蓄总额加成类型
+    readonly TotalRebate:number[],//储蓄总额加成值（默认万分比)
+    readonly TotalRebateRole:number[],//储蓄总额加成（生效职位）
+}
+/**公会权益定义 */
+export type StdGuildEquity = {
+    readonly ID:number,//权益id
+    readonly Type:number,//权益类型
+    readonly Name:string,//权益名称
+    readonly ChangeForm:string,//关联表格
+    readonly ChangePara:string,//关联参数
+    readonly Describe:string,//描述文本
+    readonly GuildRole:number[],//职位参数详情（1.会长2.副会长3.管理）
+    readonly RewardType:number[],//收益比率
+}
 /**公会职位定义*/
 export enum GuildPostType {
     President = 1,//会长
@@ -2478,7 +2622,24 @@ export enum GuildPostType {
     Officer,//官员
     Member,//普通成员
 }
-
+/**公会类型定义*/
+export enum GuildType {
+    GeneralGuild = 1,//普通公会
+    GloryGuild,//荣耀公会
+    PalaceGuild,//殿堂公会
+}
+/**公会银行储蓄类型定义*/
+export enum GuildSavingsType {
+    General = 1,//普通
+    High,//高级
+    Goddess,//女神
+}
+/**公会权益id定义*/
+export enum GuildEquityId {
+    GuildEquity_1 = 1,
+    GuildEquity_2,
+    GuildEquity_3,
+}
 /**权益卡配置 */
 export type StdEquityCard = {
     readonly Equity_CardID: number,//植灵卡id
@@ -2500,6 +2661,21 @@ export type StdEquityList = {
     readonly RewardID: number[],//奖励id
     readonly RewardNumber: number[],//奖励数量
     readonly TIme_Type: number,//持续时间
+}
+
+export type StdShopowner = {
+    readonly ID: number;//
+    readonly Uid: string;//联系渠道uid
+    readonly Shopowner_Name: string;//渠道名称
+    readonly QQid: string;//qq号
+    readonly VXid: string;//微信号
+}
+
+export type StdProduceCasting = {
+    readonly Roleid: number;//角色id
+    readonly RoleQuailty: number;//角色品质
+    readonly time: number;//生产时间单位（秒）
+    readonly produce_casting: number;//每次采集熔铸石
 }
 
 

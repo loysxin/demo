@@ -97,8 +97,8 @@ export class TradeModule {
                 }
                 MsgPanel.Show("出售成功，请到邮件领取彩")
             }
-            TradePanel.ins.SendSessionView();
-        } else if(reward_data.code == 118 || reward_data.code == 117){  
+            TradePanel.ins.SendSortOrSerch();
+        } else if(reward_data.code == 101){  
             BuyFailPanel.Show(reward_data.code);
             TradePanel.ins.SendSessionView();  
         }

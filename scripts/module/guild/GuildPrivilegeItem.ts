@@ -1,10 +1,11 @@
 import { Component, Label } from "cc";
+import { StdEquityList, StdGuildEquity } from "../../manager/CfgMgr";
 
 export class GuildPrivilegeItem extends Component {
     private nameLab: Label;
     private valueLab: Label;
     private isInit:boolean = false;
-    private data:any;
+    private data:string;
     protected onLoad(): void {
         this.nameLab = this.node.getChildByName("nameLab").getComponent(Label);
         this.valueLab = this.node.getChildByName("valueLab").getComponent(Label);
@@ -13,12 +14,12 @@ export class GuildPrivilegeItem extends Component {
         this.updateShow();
     }
     
-    SetData(data:any) {
+    SetData(data:string) {
         this.data = data;
         this.updateShow();
     }
     private updateShow():void{
         if(!this.isInit || !this.data) return;
-        
+        this.nameLab.string = this.data;
     }
 }

@@ -1,5 +1,7 @@
 import { Runtime } from "../../Runtime";
+import { Action } from "../Action";
 import { Unit } from "../actor/Unit";
+import { Skill } from "../Skill";
 import { PrimaryAttr } from "./BattleAttributes";
 import { Component } from "./Component";
 
@@ -15,6 +17,7 @@ export enum PassiveSkillType {
     AddBuff,            // 添加Buff
     ChangeAttr,         // 改变属性
     AddAttr,            // 添加属性
+    TriggerSkill,       // 触发技能
 }
 
 export class PassiveSkill {
@@ -27,16 +30,21 @@ export class PassiveSkill {
     applyTime: number;
 
     constructor(config, sourceUnit: Unit) {
-        this.id = config.Id;
+        this.id = config.PassiveID;
         this.trigger = config.Trigger;
         this.config = config;
         this.sourceUnit = sourceUnit;
         this.type = config.Type;
         this.isActivate = false;
         this.applyTime = 0;
+        if(this.config == undefined || this.id == undefined)
+        {
+            console.error("Invalid skill ID provided: ", this.id);
+        }
     }
 
     handleEvent(eventType: PassiveSkillTrigger, data: any, owner: Unit): void {
+        if(!this.isActivate) return;
 
         if (eventType === this.trigger) {
 
@@ -57,6 +65,10 @@ export class PassiveSkill {
                     return;
 
             }
+
+            this.applyTime = Runtime.game.currTime;
+            if(isRemove)
+                owner.passiveSkillsCom?.removeSkill(this.id);
 
             // 根据配置执行相应的效果
             switch (this.type) {
@@ -90,7 +102,7 @@ export class PassiveSkill {
                     let validAttrValues = attrValues.map(Number).filter(n => n > 0);
 
                     if (validAttrTypes.length === validAttrValues.length && validAttrTypes.every((n, i) => !isNaN(n) && !isNaN(validAttrValues[i]))) {
-                    validAttrTypes.forEach((attrType, index) => {
+                        validAttrTypes.forEach((attrType, index) => {
                             if (attrType > 0 && validAttrValues[index] > 0) {
                                 let value = this.sourceUnit.attrs.getSecondaryAttribute(attrType);
                                 if (this.type === PassiveSkillType.AddAttr) {
@@ -102,12 +114,26 @@ export class PassiveSkill {
                         });
                     }
                     break;
+                case PassiveSkillType.TriggerSkill:
+                    let triggerSkillId = Number(this.config.Param1)
+                    if(triggerSkillId > 0)
+                    {
+                        const triggerSkillConfig = Runtime.configManager.Get("skill")[triggerSkillId];
+                        if (triggerSkillConfig) {
+                            let blackboard = {}
+                            // blackboard.Sound = Runtime.configManager.GetSkillSound(triggerSkillId, 1)
+                            let actionCfg = JSON.parse(JSON.stringify(Runtime.configManager.Get("action")[triggerSkillConfig.ActionId]))
+                            // Skill.AddFrameEvent(actionCfg, 0.1, null, null)
+                            let action = new Action(actionCfg.FrameEvents, owner, blackboard);
+                            action.start();
+                            action.update();
+                        }
+                    }
+                    break;
                 default:
                     throw new Error("Unknown passive skill effect");
             }
-            this.applyTime = Runtime.game.currTime;
-            if(isRemove)
-                owner.passiveSkillsCom?.removeSkill(this.id);
+
         }
     }
 
@@ -144,10 +170,12 @@ export class PassiveSkills extends Component {
 
     removeSkill(id: number): void {
         const skillIndex = this.skills.findIndex(skill => skill.id === id);
-        if (skillIndex !== -1) {
+        if (skillIndex !== -1 && id !== null && id !== undefined) {
             const skill = this.skills[skillIndex];
             skill.onDeactivate(this.owner);
-            this.skills.splice(skillIndex, 1);
+            //this.skills.splice(skillIndex, 1);
+        } else {
+            console.error("Invalid skill ID provided: ", id);
         }
     }
 

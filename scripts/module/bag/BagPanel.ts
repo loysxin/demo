@@ -10,7 +10,7 @@ import { ComboBox } from "../../utils/ComboBox";
 import { GetMoreWin } from "./GetMoreWin";
 import { ComposePanel } from "./ComposePanel";
 import Logger from "../../utils/Logger";
-import { EventMgr, Evt_Item_Change } from "../../manager/EventMgr";
+import { EventMgr, Evt_Item_Change, Goto } from "../../manager/EventMgr";
 import { MsgPanel } from "../common/MsgPanel";
 import { Second, ToFixed, formatK, formatNumber } from "../../utils/Utils";
 import { OpenBoxPanel } from "./OpenBoxPanel";
@@ -22,6 +22,7 @@ import { DateUtils } from "../../utils/DateUtils";
 import { BuildingType } from "../home/HomeStruct";
 import { rightsTips } from "../rights/rightsTips";
 import { CheckCondition } from "../../manager/ConditionMgr";
+import { PANEL_TYPE } from "../../manager/UIGuide";
 
 export class BagPanel extends Panel {
     protected prefab: string = "prefabs/panel/bag/BagPanel";
@@ -122,8 +123,9 @@ export class BagPanel extends Panel {
     protected openJiaoyi() {
         let buildings = PlayerData.GetBuildingByType(BuildingType.ji_di, 101);
         let building = buildings ? buildings[0] : undefined;
-        if(building && building.level >= 6){
-            TradePanel.Show();
+        let open_lv = CfgMgr.GetSysOpenCfg(3).ConditionValue1[0]
+        if(building && building.level >= open_lv){
+            Goto(PANEL_TYPE.TradePanel);
         }else{
            Tips.Show("生命树等级不足");
         }

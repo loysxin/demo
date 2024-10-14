@@ -23,6 +23,8 @@ export class GameReplay extends AbstractGame
     endFrame = 0;
     result = null;
 
+    isVerification = false;
+
     Init()
     {
         FixedMaths.seed = 1
@@ -31,7 +33,9 @@ export class GameReplay extends AbstractGame
         Runtime.battleInitData = this.createContext.battleInitData
 
         Runtime.gameLogic = new GameLogic({})
-        Runtime.gameView = new GameView
+        this.isVerification = this.createContext.battleInitData.isVerification
+        if(!this.isVerification)
+            Runtime.gameView = new GameView
 
         Runtime.gameGrids = new GameGrids
         Runtime.collector = new Collector
@@ -45,6 +49,8 @@ export class GameReplay extends AbstractGame
                 const process = Runtime.battleModule.battleInitData.process
                 this.frameEventList = process.operations|| []
                 this.endFrame = process.is_finished ? process.current_frame : process.current_frame + sync_frame
+                if(this.isVerification)
+                    this.endFrame += 5;
                 this.result = process.result;
                 Runtime.battleModule.isReplay = true;
                 Runtime.battleModule.homeland_id = this.createContext.homeland_id
@@ -77,7 +83,7 @@ export class GameReplay extends AbstractGame
 
         Runtime.game = this
         Runtime.gameLogic.StartLogic()
-        Runtime.gameView.Start()
+        Runtime.gameView?.Start()
     }
   
     Loop()
@@ -110,14 +116,16 @@ export class GameReplay extends AbstractGame
             Runtime.gameLogic.LogicUpdate()
 
             if(this.endFrame <= this.currFrame)
+            {
                 Runtime.battleModule.ReplayEnd(this.result);
+            }
         }
 
         this.viewDeltaTime = deltaTime
         this.currViewTime += deltaTime
-        Runtime.gameView.Update()
 
-   
+        if(!this.isVerification)
+            Runtime.gameView.Update()
     }
 
     _handleFrameEvents(frameData)

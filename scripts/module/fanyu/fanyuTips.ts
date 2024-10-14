@@ -2,7 +2,7 @@ import { Input, Label, Node, Toggle,} from "cc";
 import { Panel } from "../../GameRoot";
 import { EventMgr, Evt_Hide_Scene, Evt_Show_Scene } from "../../manager/EventMgr";
 import { MsgTypeSend } from "../../MsgType";
-import { StdItem } from "../../manager/CfgMgr";
+import { CfgMgr, StdItem } from "../../manager/CfgMgr";
 import { Session } from "../../net/Session";
 import { BagItem } from "../bag/BagItem";
 import PlayerData from "../roleModule/PlayerData";
@@ -13,14 +13,14 @@ export class fanyuTips extends Panel {
     protected prefab: string = "prefabs/panel/fanyu/fanyuTips";
 
     private toggle: Toggle;
-    private tipsLabel;
+    private tipsLabel:Label;
     private callBack:Function;
 
 
     protected onLoad(): void {
         this.CloseBy("closeBtn");
         this.CloseBy("mask");
-        this.tipsLabel = this.find("tipsLabel")
+        this.tipsLabel = this.find("tipsLabel",Label)
         this.toggle = this.find("Node/toggle", Toggle);
         this.find("btn1").on(Input.EventType.TOUCH_END, this.onOk, this);
         this.find("btn2").on(Input.EventType.TOUCH_END, this.onClose, this);
@@ -33,6 +33,7 @@ export class fanyuTips extends Panel {
 
     async flush(callback:Function) {
         this.callBack = callback
+        this.tipsLabel.string = CfgMgr.GetText("fanyu_1");
     }
 
 

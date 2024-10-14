@@ -1,6 +1,6 @@
 import { Button, Label, Sprite, Toggle } from "cc";
 import { Panel } from "../../GameRoot";
-import PlayerData, { SPlayerData, SSimpleData } from "../roleModule/PlayerData";
+import PlayerData, { SPlayerData, SPlayerViewInfo } from "../roleModule/PlayerData";
 import LocalStorage from "../../utils/LocalStorage";
 import { MsgPanel } from "../common/MsgPanel";
 import { UserEditInfoPanel } from "./UserEditInfoPanel";
@@ -24,7 +24,7 @@ export class UserInfoPanel extends Panel {
     private qqNumLab:Label;
     private qqBtn:Button;
     private qqBtnLab:Label;
-    private _playerData:SSimpleData;
+    private _playerData:SPlayerViewInfo;
     protected onLoad(): void {
         this.head = this.find('HeadItem').addComponent(HeadItem);
         this.changeHeadBtn = this.find("changeHeadBtn", Button);
@@ -47,17 +47,18 @@ export class UserInfoPanel extends Panel {
         this.qqBtn.node.on(Button.EventType.CLICK, this.onBtnClick, this);
         this.hideToggle.node.on(Toggle.EventType.TOGGLE, this.onToggleChange, this);
     }
-    public flush(playerData:SSimpleData = null): void {
+    public flush(playerData:SPlayerViewInfo = null): void {
         this._playerData = playerData;
-        let data:SSimpleData = {
-            player_id:PlayerData.roleInfo.player_id,
-            name:PlayerData.roleInfo.name,
-            weChatNum:PlayerData.roleInfo.weChatNum,
-            qqNum:PlayerData.roleInfo.qqNum,
-            headId:4,//PlayerData.roleInfo.headId,
-            headFarmerId:0//PlayerData.roleInfo.headFarmerId,
-        };
-        this.head.SetData(data);
+        if(!this._playerData){
+            this._playerData = {
+                player_id:PlayerData.roleInfo.player_id,
+                name:PlayerData.roleInfo.name,
+                _weChatNumber:PlayerData.roleInfo.weChatNum,
+                _qqNumber:PlayerData.roleInfo.qqNum,
+            };
+        }
+        
+        this.head.SetData(this._playerData);
         this.updateView();
     }
     
@@ -73,7 +74,7 @@ export class UserInfoPanel extends Panel {
         this.updateView();
     }
     private onToggleChange(t:Toggle):void{
-        this.hideToggle.isChecked = false;
+        this.hideToggle.isChecked = true;
         MsgPanel.Show("暂不支持开放显示");
     }
     private onBtnClick(btn:Button):void{
@@ -111,19 +112,19 @@ export class UserInfoPanel extends Panel {
         let isHide:boolean = true;//是否隐藏联系方式
         //查看自己
         if(this.isOwn){
-            isHide = false;
+            isHide = true;
             this.hideToggle.node.active = true;
             this.hideToggle.isChecked = isHide;
             this.editNameBtn.node.active = true;
             this.changeHeadBtn.node.active = true;
             this.hideToggle.interactable = true;
             let myWeChat:string = LocalStorage.GetPlayerData(PlayerData.playerIdKey, "UserWeChat");
-            let myQQ:number = LocalStorage.GetPlayerData(PlayerData.playerIdKey, "UserQQ");
+            let myQQ:string = LocalStorage.GetPlayerData(PlayerData.playerIdKey, "UserQQ");
             if(myWeChat){
                 weiXinStr = myWeChat;
             }
             if(myQQ){
-                qqStr = myQQ.toString();
+                qqStr = myQQ;
             }
             this.weiXinBtnLab.string = "编辑";
             this.qqBtnLab.string = "编辑";
@@ -148,8 +149,8 @@ export class UserInfoPanel extends Panel {
         
         this.nameLab.string = this._playerData.name;
         this.uidLab.string = this._playerData.player_id.toString();
-        if(this._playerData.weChatNum) weiXinStr = this._playerData.weChatNum.toString();
-        if(this._playerData.qqNum) qqStr = this._playerData.qqNum.toString();
+        if(this._playerData._weChatNumber) weiXinStr = this._playerData._weChatNumber;
+        if(this._playerData._qqNumber) qqStr = this._playerData._qqNumber;
         this.weiXinNumLab.string = weiXinStr;
         this.qqNumLab.string = qqStr;
     }

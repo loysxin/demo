@@ -1,7 +1,7 @@
-import { Attr, CfgMgr, ConditionType, FishRoundState, ItemSubType, ItemType, MessagId, OneOffRedPointId, ResourceType, ShopGroupId, ShopType, StdActiveSkill, StdAdvister, StdAttr, StdCommonType, StdFishCommon, StdFishShop, StdGuildRole, StdItem, StdMessag, StdPassiveLevel, StdProduction, StdRole, StdRoleLevel, StdShopGroup, StdSysId, StdSystemOpen, ThingItemId, ThingType } from "../../manager/CfgMgr";
+import { Attr, CfgMgr, ConditionType, FishRoundState, GuildPostType, ItemSubType, ItemType, MessagId, OneOffRedPointId, ResourceType, ShopGroupId, ShopType, StdActiveSkill, StdAdvister, StdAttr, StdCommonType, StdEquityList, StdFishCommon, StdFishShop, StdGuildBank, StdGuildEquity, StdGuildEvent, StdGuildRole, StdGuildType, StdItem, StdMerge, StdMessag, StdPassiveLevel, StdProduction, StdRole, StdRoleLevel, StdShopGroup, StdShopowner, StdSysId, StdSystemOpen, ThingItemId, ThingType } from "../../manager/CfgMgr";
 import { maxx, ReplaceStr } from "../../utils/Utils";
-import { GetAttrValue, GetFightAttrValue } from "../common/BaseUI";
-import { BuildingType } from "../home/HomeStruct";
+import { ConditionSub, FormatCondition, GetAttrValue, GetFightAttrValue } from "../common/BaseUI";
+import { BuildingType, SPlayerDataFusionStone } from "../home/HomeStruct";
 import { DateUtils } from "../../utils/DateUtils";
 import { EventMgr, Evt_AdvisterUpdate, Evt_ChannelMsgUpdate, Evt_Item_Change, Evt_LoginRedPointUpdate, Evt_Role_Del } from "../../manager/EventMgr";
 import { BeforeGameUtils } from "../../utils/BeforeGameUtils";
@@ -213,7 +213,7 @@ class PlayerData {
             let roleData = this.roleInfo.roles;
             roleData.forEach((data) => {
                 let stateList:number[] = PlayerData.GetRoleStateList(data)
-                if (stateList.length == 0 && !data.is_assisting) {
+                if (stateList.length == 0 && !data.is_assisting && !data.is_in_main_building) {
                     let role_data: SThing = {
                         type: ThingType.ThingTypeRole,
                         role: data,
@@ -249,6 +249,20 @@ class PlayerData {
 
         } else if (subType == 3) {
             //装备
+        }
+        return datas;
+    }
+
+    /**交易所订单数据排除空数据 */
+    static getOrderListData(data:SOrderData[]){
+        let datas:SOrderData[] = []
+        if(data){
+            for (let index = 0; index < data.length; index++) {
+                const element = data[index];
+                if (element && element.player_id) {
+                    datas.push(element)
+                } 
+            }
         }
         return datas;
     }
@@ -450,7 +464,7 @@ class PlayerData {
             // }
         } else if (buildingId) {
             for (let role of roles) {
-                if (role.building_id == buildingId) {
+                if (role.building_id == buildingId || (role.is_in_main_building && role.main_building_id == buildingId)) {
                     works.push(role);
                 }
             }
@@ -633,10 +647,17 @@ class PlayerData {
         for (let index = 0; index < this.roleInfo.roles.length; index++) {
             let role = this.roleInfo.roles[index];
             if (role.id == info.role_id) {
-                role.building_id = info.building_id;
-                role.is_in_building = true;
-                role.battle_power = CountPower(role.type, role.level, role);
-                return role.building_id;
+                //主建筑的特殊处理
+                if(info.building_id != 1){
+                    role.building_id = info.building_id;
+                    role.is_in_building = true;
+                    role.battle_power = CountPower(role.type, role.level, role);
+                    return role.building_id;
+                }else{
+                    role.main_building_id = 1;
+                    role.is_in_main_building = true;
+                    return role.main_building_id;
+                }
             }
         }
     }
@@ -650,9 +671,15 @@ class PlayerData {
         for (let index = 0; index < this.roleInfo.roles.length; index++) {
             let role = this.roleInfo.roles[index];
             if (role.id == info.role_id) {
-                role.building_id = 0;
-                role.is_in_building = false;
-                return role.building_id;
+                if(info.building_id == 1){
+                    role.main_building_id = 0;
+                    role.is_in_main_building = false
+                    return role.main_building_id;
+                }else{
+                    role.building_id = 0;
+                    role.is_in_building = false;
+                    return role.building_id;
+                }
             }
         }
     }
@@ -1031,15 +1058,18 @@ class PlayerData {
         return false;
     }
     /**冰封湖泊id */
-    static get FishIcedLakeId(): number {
+    static get FishIcedLakeIds(): number[] {
+        let newList:number[] = [];
         if (this.CurFishRoundInfo) {
             if (this.fishData && this.fishData.lakes && this.fishData.lakes.length) {
                 for (const lakeData of this.fishData.lakes) {
-                    if (lakeData.is_frozen) return lakeData.lake_id;
+                    if (lakeData.is_frozen){
+                        newList.push(lakeData.lake_id);
+                    }
                 }
             }
         }
-        return 0;
+        return newList;
     }
 
     /**获取当前鱼竿类型*/
@@ -1376,9 +1406,8 @@ class PlayerData {
         let curLv: number;
         let nextLv: StdRoleLevel;
         let items: SPlayerDataItem[] = PlayerData.GetItemTypeDatas(ItemType.exp);
-        let stdItem: StdItem;
         let totlaExp: number = items.reduce((count, item) => {
-            stdItem = CfgMgr.Getitem(item.id);
+            let stdItem: StdItem = CfgMgr.Getitem(item.id);
             return count + stdItem.ItemEffect1 * item.count;
         }, 0);
 
@@ -1389,6 +1418,12 @@ class PlayerData {
             if (curLv >= maxLv) return false;
             nextLv = CfgMgr.GetRoleExpMaxLevel(role.type, curLv, role.experience + totlaExp);
             if (nextLv) {
+                if (nextLv.ConditionId && nextLv.ConditionId) {
+                    let condData: ConditionSub = FormatCondition(nextLv.ConditionId[0], nextLv.ConditionLv[0]);
+                    if (condData.fail) {
+                        return false;
+                    }
+                }
                 if (nextLv.Level > curLv) return true;
                 //突破
                 if (nextLv.BreakItem && nextLv.BreakItem.length > 0) {
@@ -1733,15 +1768,21 @@ class PlayerData {
     }
     
     static MyGuild:SGuild = null;//我的公会数据
+    static ResetMyGuildData():void{
+        this.MyGuild = null;
+        
+    }
     //获取我的公会权限
     static GetMyGuildLimit():StdGuildRole{
         if(!this.MyGuild) return null;
         let memberData:SGuildMember = this.MyGuild.members[this.roleInfo.player_id];
+        if(!memberData) return null;
         return CfgMgr.GetGuildRole(memberData.role);
     }
     /**获取我是否有审核权限 */
     static GetMyGuildApply():boolean{
         let stdRole:StdGuildRole = this.GetMyGuildLimit();
+        if(!stdRole) return false;
         return stdRole && stdRole.PermissionApplication > 0;
     }
     /**获取我是否有修改行会信息权限 */
@@ -1758,7 +1799,9 @@ class PlayerData {
     }
     /**获取公会成员是否满足莫一项公会职位*/
     static GetGuildMeetPost(playerId:string, postId:number):boolean{
-        let memberData:SGuildMember = this.MyGuild.members[this.roleInfo.player_id];
+        if(!this.MyGuild) return false;
+        let memberData:SGuildMember = this.MyGuild.members[playerId];
+        if(!memberData) return false;
         return memberData.role == postId;
     }
     /**获取公会职位人数 */
@@ -1774,6 +1817,94 @@ class PlayerData {
         }
         return num;
     }
+    
+    /**获取公会是否已申请过*/
+    static GetGuildIsHaveApply(guildId:string, list:SGuildApplication[]):boolean{
+        let applyData:SGuildApplication;
+        let applyTime:number = CfgMgr.GetGuildComm().ApplicationsExpirationTime;
+        for (let index = 0; index < list.length; index++) {
+            applyData = list[index];
+            if(applyData.guild_id == guildId && this.GetServerTime() < applyData.time + applyTime) return true;
+        }
+        return false;
+    }
+    /**获取公会事件内容*/
+    static GetGuildEventCont(guildEventData:SGuildEvent):string{
+        let stdGuildEvent:StdGuildEvent = CfgMgr.GetGuildEvent(guildEventData.event_type);
+        let result = stdGuildEvent.Content;
+        if(stdGuildEvent){
+            
+            if(guildEventData.event_args){
+                for (let index = 0; index < guildEventData.event_args.length; index++) {
+                    result = this.GetGuildEventStr(result,stdGuildEvent.ID, index, guildEventData.event_args[index]);
+                }
+            }
+            
+        }
+        return result;
+    }
+    private static GetGuildEventStr(cont:string, eventId:number, index:number, val:any):string{
+        let key:string = `{${index}}`;
+        let newVal:any;
+        switch(eventId){
+            case GuildEventType.EventType_4:
+                if(index == 1){
+                    let stdGuildRole:StdGuildRole = CfgMgr.GetGuildRole(Number(val));
+                    if(stdGuildRole){
+                        newVal = stdGuildRole.Name;
+                    }
+                }
+            break;
+        }
+        return cont.replace(key, newVal || val);
+    }
+    /**根据公会类型获取公会权益列表 */
+    static GetGuildPostPrivilegeList(guildType:number, guildPost:GuildPostType):StdGuildEquity[]{
+        let list:StdGuildEquity[] = [];
+        let stdGuildType:StdGuildType = CfgMgr.GetGuildType(guildType);
+        let idList = stdGuildType[`Equity_list${guildPost}`];
+        if(!idList) return list;
+        let stdEquity:StdGuildEquity;
+        for (let i = 0; i < idList.length; i++) {
+            stdEquity = CfgMgr.GetGuildEquity(idList[i]);
+            if(stdEquity){
+                list.push(stdEquity);
+            }  
+        }
+        return list;
+    }
+
+    /**获取我的公会权益列表 */
+    static GetMyGuildPrivilegeList():StdGuildEquity[]{
+        if(!this.MyGuild) return [];
+        let myPost:StdGuildRole = this.GetMyGuildLimit();
+        if(!myPost) return [];
+        return this.GetGuildPostPrivilegeList(this.MyGuild.type, myPost.ID);
+    }
+
+    /**根据传入id获取我的公会权益 没有此权益则返回null */
+    static GetMyGuildPrivilegeById(id:number):StdGuildEquity{
+        let list:StdGuildEquity[] = this.GetMyGuildPrivilegeList();
+        for (let std of list) {
+            if(std.ID == id) return std;
+        }
+        return null;
+    }
+
+    /**根据传入id获取我的公会权益值 没有则返回0*/
+    static GetMyGuildPrivilegeByIdToValue(id:number):number{
+        let myStd:StdGuildRole = PlayerData.GetMyGuildLimit();
+        if(!myStd) return 0;
+        let std:StdGuildEquity = this.GetMyGuildPrivilegeById(id);
+        if(!std) return 0;
+        for (let index = 0; index < std.GuildRole.length; index++) {
+            if(myStd.ID == std.GuildRole[index]){
+                return std.RewardType[index];
+            }
+            
+        }
+        return 0;
+    }
     /**权益卡数据 */
     static rightsData:SBenefit = null;
 
@@ -1781,6 +1912,85 @@ class PlayerData {
     /**是否激活权益 */
     static GetIsActivateRights(){  
         return Object.keys(PlayerData.rightsData.all_equities).length > 0;
+    }
+    
+    /**获取可繁育主卡数据 */
+    static getFanyuMainRole() {
+        let stds: StdMerge[] = CfgMgr.Get("role_quality");
+        let roles = [];
+        for (let std of stds) {
+            for (let role of this.playerInfo.roles) {
+                let isdefense = false;
+                if (this.playerInfo.defense_lineup) {
+                    for (let defense of this.playerInfo.defense_lineup) {
+                        if (defense.role_id == role.id) {
+                            isdefense = true;
+                            break;
+                        }
+                    }
+                }
+                let isattack = false;
+                if (this.playerInfo.attack_lineup) {
+                    for (let defense of this.playerInfo.attack_lineup) {
+                        if (defense && defense.role_id == role.id) {
+                            isattack = true;
+                            break;
+                        }
+                    }
+                }
+                if (!isattack && !isdefense && role.type == std.Roleid && role.quality + 1 === std.RoleQuailty && role.building_id == 0 && !role.is_assisting && role.passive_skills && !role.is_in_main_building) {
+                    // console.log("mainCard**********",role.id,role.building_id);
+                    roles.push(role);
+                }
+            }
+        }
+        let curRoles = [];
+        curRoles = roles.filter((item, index) => roles.indexOf(item) === index);
+        curRoles.sort((a: SPlayerDataRole, b: SPlayerDataRole) => {
+            if (a.passive_skills.length == b.passive_skills.length) {
+                return b.battle_power - a.battle_power;
+            } else {
+                return b.passive_skills.length - a.passive_skills.length;
+            }
+        })
+        return curRoles;
+    }
+    /**获取可繁育副卡数据 */
+    static getFanyuOrtherRole(mainRole, std) {
+        let roles = [];
+        for (let role of this.playerInfo.roles) {
+            let isdefense = false;
+            if (this.playerInfo.defense_lineup) {
+                for (let defense of this.playerInfo.defense_lineup) {
+                    if (defense.role_id == role.id) {
+                        isdefense = true;
+                        break;
+                    }
+                }
+            }
+            let isattack = false;
+            if (this.playerInfo.attack_lineup) {
+                for (let defense of this.playerInfo.attack_lineup) {
+                    if (defense && defense.role_id == role.id) {
+                        isattack = true;
+                        break;
+                    }
+                }
+            }
+            if (!isattack && !isdefense && std.OtherRoleid.indexOf(role.type) != -1 && mainRole.quality === role.quality && role.building_id == 0 && !role.is_assisting && role.passive_skills && !role.is_in_main_building) {
+                roles.push(role);
+            }
+        }
+        let curRoles = [];
+        curRoles = roles.filter((item, index) => roles.indexOf(item) === index);
+        curRoles.sort((a: SPlayerDataRole, b: SPlayerDataRole) => {
+            if (a.passive_skills.length == b.passive_skills.length) {
+                return b.battle_power - a.battle_power;
+            } else {
+                return b.passive_skills.length - a.passive_skills.length;
+            }
+        })
+        return curRoles;
     }
 }
 export default PlayerData;
@@ -2025,6 +2235,8 @@ export type SPlayerDataRole = {
     is_in_attack_lineup: boolean;
     is_in_defense_lineup: boolean;
     trade_cd:number;
+    is_in_main_building?: boolean;
+    main_building_id?: number;
     sort?: number;
 }
 
@@ -2056,15 +2268,7 @@ export type SPlayerDataHomeland = {
     total_rock_collect_duration: number;
     total_seed_collect_duration: number;
 }
-/**角色简单数据 */
-export type SSimpleData = {
-    player_id: string;//玩家id
-    name: string;//玩家名字
-    weChatNum?:string;//玩家微信
-    qqNum?:number;//玩家QQ
-    headId?:number;//玩家头像id
-    headFarmerId?:number;//玩家头像框id
-}
+
 /**角色数据 */
 export type SPlayerData = {
     resource_exchange_uses: number;
@@ -2072,7 +2276,7 @@ export type SPlayerData = {
     wechat_id: string;
     name: string;
     weChatNum:string;
-    qqNum:number;
+    qqNum:string;
     currency: number;
     currency2: number;
     currency3: number;
@@ -2092,6 +2296,7 @@ export type SPlayerData = {
     battle_power: number;
     defense_lineup: SBattleRole[];
     config_data: { [key: number]: number };
+    fusion_stone_data:SPlayerDataFusionStone;//熔铸石采集数据
 }
 
 /**生产道具 */
@@ -2551,7 +2756,7 @@ export type SFishingLakeData = {
     lake_id: number,//湖泊id
     cost: number,//已投饲料
     is_frozen: number,// 是否冰冻
-    player_count: number//当前湖泊玩家数
+    player_count: number,//当前湖泊玩家数
 }
 // 玩家钓鱼数据
 export type SFishingPlayerStateData = {
@@ -2574,6 +2779,7 @@ export type SFishingRoundInfo = {
     is_frozen: boolean,//是冰封
     is_settlement: boolean,//是否已结算
     round: number,//当前回合数
+    kill_type:number,//击杀模式
 }
 /**钓鱼状态 */
 export type SFishingStateData = {
@@ -2618,6 +2824,7 @@ export type SFishingLogItemData = {
     fatigue_get: number,// 疲劳回复
     lake_id: number,// 湖泊
     frozen_lake_id: number,//冰冻的湖泊
+    frozen_lake_ids: number[],//冰冻的湖泊列表
     fish_item: SFishingItem[],// 获得的鱼
     fish_score_get: number,// 获得的积分
 }
@@ -2625,6 +2832,7 @@ export type SFishingLogItemData = {
 export type SFishingFrozenLogData = {
     round: number;//回合数
     lake_id: number;//冰封湖泊id
+    lake_ids:number[];//冰冻湖泊id
 }
 /**钓鱼回合湖泊记录 */
 export type SFishingRoundLakeRecordData = {
@@ -2796,6 +3004,7 @@ export type SBattlePlunderData = {
     status: string,
     revenge_battle_id: string,
     is_revenge: boolean,
+    version: string,
 }
 export type SBattleData = {
     attack_lineup: SBattleRole[],
@@ -2987,9 +3196,9 @@ export type SGuildMember = {
 	player_id:string,//成员id
     name:string,//成员名称
     level:number,//等级
-    fight:number,//战力
+    battle_power:number,//战力
 	role:number,// 成员类型, 见配置表
-    notes:string,//留言
+    message:string,//留言
 	join_time:number,//加入事件
 }
 /**公会公告 */
@@ -2998,13 +3207,13 @@ export type SGuildAnnouncement = {
 }
 // 公会申请审批条件
 export type SGuildJoinCriteria = {
-    no_criteria:number,//是否需要审核
+    need_applications:number,//是否需要审核
 	min_home_level:number,// 最低家园等级
 }
 /**公会数据 */
 export type SGuild = {
     guild_id:string//公会id
-    type: string, //公会类型
+    type: number, //公会类型
     name: string,// 公会名称
     level: number,//等级等级
     exp: number, //公会经验
@@ -3029,13 +3238,53 @@ export enum ApplicationStatus {
     approved = "approved", // 已通过
     rejected = "rejected", // 已拒绝
 }
+/**公会事件类型定义 */
+export enum GuildEventType{
+    EventType_1 = 1,//创建公会
+    EventType_2,//成员加入公会
+    EventType_3,//成员离开公会
+    EventType_4,//职位变更
+    EventType_5,//公会升级
+    EventType_6,//捐献记录
+    EventType_7,//	踢出公会
+}
 /**公会申请数据 */
 export type SGuildApplication = {
-	player_id:string,
-	player_name:string,
-	time:number,//
-	status:ApplicationStatus,
-	message:string,
+	_id:string,//
+	guild_id:string,//公会id
+    player_id:string,//申请者id
+    name:string,//申请者名称
+    level:number,//申请者等级
+    battle_power:number,//申请者战力
+	time:number,//申请时间
+	message:string,//申请者心情留言
+}
+
+/**公会银行储蓄数据 */
+export type SDeposit = {
+    id:string,//储蓄id
+	guild_id:string,    // 公会ID
+	user_id:string,   //玩家id
+	donate_id:string,//储蓄配置id
+	cost_type:number,//储蓄货币类型
+    amount:number,//储蓄货币数量
+    duration_days:number,//储蓄天数
+    interest_total:number,//当前利息
+    status:string,//储蓄状态 active 激活 withdrawn已提取
+    expiration_time:number,//储蓄到期时间
+    deposit_time:number,//储蓄开始时间
+    withdraw_time:number,//取款时间
+	guild_name:number,//公会名称
+    user_name,//用户名称
+}
+
+/**公会银行数据 */
+export type SGuildDepositTotal = {
+    _id:string,//储蓄id
+	guild_id:string,    // 公会Id
+	cost_type:number,//储蓄货币类型
+    total_amount:number,//储蓄货币总额
+    total_record:number,//储蓄此类货币人数
 }
 
 /**权益卡数据 */
@@ -3049,5 +3298,18 @@ export type SBenefit = {
 export type SPlayerBenefitCard = {
 	cards:{[key:number]:number},
 	claimed_today:boolean,
+}
+/**查看玩家数据 */
+export type SPlayerViewInfo = {
+    player_id:string,//玩家id
+    name?:string,//玩家名称
+    icon_url?:string,//玩家头像
+    avatar_url?:string,//玩家头像框
+    level?:number,//玩家等级
+    battle_power?:number,//玩家战力
+    is_online?:number,//是否在线 0不在 1 在
+    guild_message?:string,//公会心情留言
+    _weChatNumber?:string,//微信号
+    _qqNumber?:string,//QQ号
 }
 

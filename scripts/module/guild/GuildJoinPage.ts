@@ -2,10 +2,10 @@ import { EditBox, Slider, Node, Button, Label } from "cc";
 import { GuildContBase } from "./GuildContBase";
 import { AutoScroller } from "../../utils/AutoScroller";
 import { GuildJoinItem } from "./GuildJoinItem";
-import { SGuild } from "../roleModule/PlayerData";
+import { SGuild, SGuildApplication } from "../roleModule/PlayerData";
 import { Session } from "../../net/Session";
 import { MsgTypeSend } from "../../MsgType";
-import { EventMgr, Evt_GuildSearch } from "../../manager/EventMgr";
+import { EventMgr, Evt_GuildApplyResult, Evt_GuildSearch, Evt_SelfApplyGuildUpdate } from "../../manager/EventMgr";
 import { MsgPanel } from "../common/MsgPanel";
 
 /**
@@ -19,6 +19,8 @@ export class GuildJoinPage extends GuildContBase {
     private noneListCont:Node;
     private defDatas:SGuild[];
     private seekDatas:SGuild[];
+    private applyDatas:SGuildApplication[]; 
+    private isDef:boolean = true;
     protected onLoad(): void {
         this.inputName = this.node.getChildByPath("seekCont/inputName").getComponent(EditBox);
         this.seekBtn = this.node.getChildByPath("seekCont/seekBtn").getComponent(Button);
@@ -34,14 +36,22 @@ export class GuildJoinPage extends GuildContBase {
             this.inputName.update();
         })
         super.onLoad();
-        EventMgr.on(Evt_GuildSearch, this.onGuildGetList, this);
+        
     }
     onShow(): void {
         super.onShow();
+        this.applyDatas = [];
+        EventMgr.on(Evt_GuildSearch, this.onGuildGetList, this);
+        EventMgr.on(Evt_SelfApplyGuildUpdate, this.onApplyListUpdate, this);
+        EventMgr.on(Evt_GuildApplyResult, this.onApplyResult, this);
         this.getGuildList();
+        Session.Send({ type: MsgTypeSend.GuildGetSelfApplications, data: {} });
     }
     onHide(): void {
         super.onHide();
+        EventMgr.off(Evt_GuildSearch, this.onGuildGetList, this);
+        EventMgr.off(Evt_SelfApplyGuildUpdate, this.onApplyListUpdate, this);
+        EventMgr.off(Evt_GuildApplyResult, this.onApplyResult, this);
     }
     private onBtnClick(btn:Button):void{
         switch(btn){
@@ -67,6 +77,7 @@ export class GuildJoinPage extends GuildContBase {
         this.updateGuildList(true);
     }
     private updateGuildList(isDef:boolean):void{
+        this.isDef = isDef;
         let datas:SGuild[] = [];
         if(isDef){
             datas = this.defDatas;
@@ -90,6 +101,17 @@ export class GuildJoinPage extends GuildContBase {
         this.updateGuildList(isDef);
        
     }
+    private onApplyListUpdate(list:SGuildApplication[]):void{
+        if(!this.node.activeInHierarchy)return;
+        this.applyDatas = list;
+        this.updateGuildList(this.isDef);
+    }
+    private onApplyResult(data:SGuildApplication):void{
+        if(!this.node.activeInHierarchy)return;
+        if(!this.applyDatas) this.applyDatas = [];
+        this.applyDatas.push(data);
+        this.updateGuildList(this.isDef);
+    }
     private getGuildList():void{
         if(!this.defDatas || this.defDatas.length < 1){
             Session.Send({type: MsgTypeSend.GuildRecommendedList, data:{count:10}});
@@ -98,7 +120,7 @@ export class GuildJoinPage extends GuildContBase {
     protected updateGuildJoinItem(item: Node, data: SGuild) {
         let joinItem = item.getComponent(GuildJoinItem);
         if (!joinItem) joinItem = item.addComponent(GuildJoinItem);
-        joinItem.SetData(data);
+        joinItem.SetData(data, this.applyDatas);
     }
     
 }

@@ -4,7 +4,7 @@ import { Attr, AttrFight, CfgMgr, StdBuilding, StdDefineBuilding, ThingItemId } 
 import { BuildingType } from '../HomeStruct';
 import { folder_item, ResMgr } from '../../../manager/ResMgr';
 import PlayerData, { BoostType } from '../../roleModule/PlayerData';
-import { Evt_Building_Upgrade, Evt_Building_Upgrade_Complete, EventMgr, Evt_Item_Change, Evt_Building_Effect } from '../../../manager/EventMgr';
+import { Evt_Building_Upgrade, Evt_Building_Upgrade_Complete, EventMgr, Evt_Item_Change, Evt_Building_Effect, Goto } from '../../../manager/EventMgr';
 import { ToFixed, formatNumber, minn } from '../../../utils/Utils';
 import { Session } from '../../../net/Session';
 import { Tips } from '../../login/Tips';
@@ -15,6 +15,8 @@ import { DateUtils } from '../../../utils/DateUtils';
 import { BeforeGameUtils } from '../../../utils/BeforeGameUtils';
 import { Audio_CommonBuilding, AudioMgr } from '../../../manager/AudioMgr';
 import { MsgPanel } from '../../common/MsgPanel';
+import { PANEL_TYPE } from '../../../manager/UIGuide';
+import { GameSet } from '../../GameSet';
 const { ccclass, disallowMultiple, property } = _decorator;
 
 @ccclass('BaseLvPage')
@@ -25,6 +27,7 @@ export class BaseLvPage extends Component {
     private infoScroller2: AutoScroller;
     private lvScroller: Node;
     private cdScroller: Node;
+    private effNode: Node;
 
     private btn: Sprite;
     private btnLabel: Label;
@@ -41,11 +44,17 @@ export class BaseLvPage extends Component {
         Attr.SeedCollectEfficiency, "zhongzi",
     );
 
+    private is_has_rights: boolean = true;
+    private is_jump: boolean = false;
+    private is_jy: boolean = false;
+    private jump_lv: number = 1;
+
     protected onLoad(): void {
         this.infoScroller = this.node.getChildByPath("infoBar/layout").getComponent(AutoScroller);
         this.infoScroller2 = this.node.getChildByPath("infoBar/layout2").getComponent(AutoScroller);
         this.lvScroller = this.node.getChildByPath("layout/content/lvLayout/content");
         this.cdScroller = this.node.getChildByPath("layout/content/cdLayout/content");
+        this.effNode = this.node.getChildByPath("btn/qipao");
 
         this.btn = this.node.getChildByName("btn").getComponent(Sprite);
         this.btnLabel = this.node.getChildByPath("btn/layout/lab").getComponent(Label);
@@ -82,11 +91,19 @@ export class BaseLvPage extends Component {
      * @returns 
      */
     private flush() {
+        this.is_jump = false;
+        this.effNode.active = false;
+        this.is_has_rights = PlayerData.GetIsActivateRights();
+        this.is_jy = GameSet.Server_cfg.Mark ? true : false;
+        this.jump_lv = CfgMgr.getEquityListById(19).Value - 1;
         let state = PlayerData.GetBuilding(this.stdDefine.BuildingId, this.stdDefine.HomeId);
         if (!state) return;
         this.stdLv = CfgMgr.GetBuildingLv(this.stdDefine.BuildingId, state.level);
         this.stdnext = CfgMgr.GetBuildingLv(this.stdDefine.BuildingId, state.level + 1);
         if (!this.stdLv) return;
+        if(this.stdDefine.BuildingId == BuildingType.ji_di){
+            this.is_has_rights = PlayerData.GetIsActivateRights();
+        }
 
         let wide = this.node.getChildByPath("infoBar/frame").getComponent(UITransform).contentSize.width;
         let folder = BuildingType[this.stdDefine.BuildingType];
@@ -107,13 +124,22 @@ export class BaseLvPage extends Component {
     /**生命周期update */
     protected update(dt: number): void {
         if (!this.stdLv) return;
-
         if (!this.stdnext) {
             this.cdScroller.active = false;
             this.btnLabel.string = "最高级";
             this.countDown.node.parent.active = false;
             this.btn.grayscale = true;
             return;
+        }
+
+        //主基地等级>=4并且没有权益卡
+        if(this.is_jy && this.stdDefine.BuildingId == BuildingType.ji_di && this.stdLv.Level >= this.jump_lv && !this.is_has_rights){
+            this.btnLabel.string = "前往购买";
+            this.countDown.node.parent.active = false;
+            this.btn.grayscale = false;
+            this.is_jump = true;
+            this.effNode.active = true;
+            return;  
         }
         this.cdScroller.active = true;
 
@@ -338,6 +364,10 @@ export class BaseLvPage extends Component {
                     //Tips.Show("资源不足");
                     return;
                 }
+            }
+            if(this.is_jump){
+                Goto(PANEL_TYPE.rightsPanel);
+                return;
             }
             AudioMgr.PlayOnce(Audio_CommonBuilding);
             // 请求开始升级

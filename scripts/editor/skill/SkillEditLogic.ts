@@ -1,4 +1,4 @@
-import { Node, assetManager, game, path, resources, sp } from "cc";
+import { JsonAsset, Node, assetManager, game, path, resources, sp } from "cc";
 import { GameSet } from "../../module/GameSet";
 import { HomeScene } from "../../module/home/HomeScene";
 import { map } from "../../module/home/MapData";
@@ -17,6 +17,9 @@ import { ResMgr } from "../../manager/ResMgr";
 import { GameObj } from "../../GameRoot";
 import { BattleLogic } from "../../battle/BattleLogic";
 import { Runtime } from "../../battle/BattleLogic/Runtime";
+import { FightState } from "../../module/roleModule/PlayerData";
+import { BattleReplayPanel } from "../../battle/Ready/BattleReplayPanel";
+import { HomeLogic } from "../../module/home/HomeLogic";
 
 export class SkillEditLogic {
     private static _ins: SkillEditLogic;
@@ -31,25 +34,38 @@ export class SkillEditLogic {
 
     private hero: IEntity;
     private others: Hero[]
-    Init() {
+    async Init() {
 
         if(!BattleLogic.ins)
             new BattleLogic();
 
-        let data = 
-        {
-            battle_type: "MartialDisplay",
-            homeland_id: 101
+
+        // let data = 
+        // {
+        //     battle_type: "MartialDisplay",
+        //     homeland_id: 101
             
-        }
+        // }
 
-        let node = map.GetGrid(HomeScene.ins.GetHomeCfg().camera);
-        SceneCamera.LookAt(node.x, node.y);
+        let asset = await ResMgr.LoadResAbSub("config/record/battle", JsonAsset);
+        let data = asset.json;
 
+        data.isReplay = true;
+        data.battle_type = "plunder"
+        data.homeland_id = data.plunder_data.defender_battle_data.homeland_id;
+        await HomeLogic.ins.EnterPvPReplayScene(data.homeland_id, data.plunder_data.defender_battle_data.buildings);
+        if(!BattleLogic.ins) new BattleLogic();
         BattleLogic.ins.BattleStartPushData = data;
         BattleLogic.ins.init();
-
         BattleLogic.ins.start();
+
+        // let node = map.GetGrid(HomeScene.ins.GetHomeCfg().camera);
+        // SceneCamera.LookAt(node.x, node.y);
+
+        // BattleLogic.ins.BattleStartPushData = data;
+        // BattleLogic.ins.init();
+
+        // BattleLogic.ins.start();
         
 
 

@@ -1,14 +1,17 @@
-import { EditBox, Slider, Node, Button, Label, Sprite, path, SpriteFrame, UITransform, Toggle } from "cc";
+import { EditBox, Slider, Node, Button, Label, Sprite, path, SpriteFrame, UITransform, Toggle, RichText } from "cc";
 import { GuildContBase } from "./GuildContBase";
 import { AutoScroller } from "../../utils/AutoScroller";
 import { ConsumeItem } from "../common/ConsumeItem";
 import { CfgMgr, StdGuildComm, StdGuildLogo } from "../../manager/CfgMgr";
 import { folder_icon, ResMgr } from "../../manager/ResMgr";
 import { ItemUtil } from "../../utils/ItemUtils";
-import { SThing } from "../roleModule/PlayerData";
+import PlayerData, { SGuildAnnouncement, SGuildJoinCriteria, SPlayerDataBuilding, SThing } from "../roleModule/PlayerData";
 import { MsgPanel } from "../common/MsgPanel";
 import { Session } from "../../net/Session";
 import { MsgTypeSend } from "../../MsgType";
+import { GuildCreatPanel } from "./GuildCreatPanel";
+import { SetNodeGray } from "../common/BaseUI";
+import { BuildingType } from "../home/HomeStruct";
 
 /**
  * 公会创建页
@@ -16,8 +19,8 @@ import { MsgTypeSend } from "../../MsgType";
 export class GuildCreatPage extends GuildContBase {
     private inputName: EditBox;
     private logoList:AutoScroller;
-    private needApply:Toggle;
-    private noApply:Toggle;
+    private needApplyBtn:Button;
+    private noApplyBtn:Button;
     private applyLab:Label;
     private leftBtn:Button;
     private slider:Slider;
@@ -26,28 +29,27 @@ export class GuildCreatPage extends GuildContBase {
     private numLab:Label;
     private inputNotice:EditBox;
     private btn:Button;
-    private condLab:Label;
-    private consumeItem:ConsumeItem;
+    private condLab:RichText;
     private logoDatas:StdGuildLogo[];
     private selectLogoData:StdGuildLogo;
     private stdGuildComm:StdGuildComm;
     private maxLv:number;
     private curLv:number = 1;
+    private applyState:number = 0;
     protected onLoad(): void {
         this.inputName = this.node.getChildByName("inputName").getComponent(EditBox);
         this.logoList = this.node.getChildByName("logoList").getComponent(AutoScroller);
         this.applyLab = this.node.getChildByPath("ToggleGroup/applyLab").getComponent(Label);
-        this.needApply = this.node.getChildByPath("ToggleGroup/Toggle1").getComponent(Toggle);
-        this.noApply  = this.node.getChildByPath("ToggleGroup/Toggle2").getComponent(Toggle);
+        this.needApplyBtn = this.node.getChildByPath("ToggleGroup/needApplyBtn").getComponent(Button);
+        this.noApplyBtn  = this.node.getChildByPath("ToggleGroup/noApplyBtn").getComponent(Button);
         this.leftBtn = this.node.getChildByPath("sliderCont/leftBtn").getComponent(Button);
         this.slider = this.node.getChildByPath("sliderCont/slider").getComponent(Slider);
         this.sliderBar = this.node.getChildByPath("sliderCont/slider/sliderBar");
         this.rightBtn = this.node.getChildByPath("sliderCont/rightBtn").getComponent(Button);
         this.numLab = this.node.getChildByPath("sliderCont/numLab").getComponent(Label);
-        this.condLab = this.node.getChildByName("condLab").getComponent(Label);
+        this.condLab = this.node.getChildByName("condLab").getComponent(RichText);
         this.inputNotice = this.node.getChildByName("inputNotice").getComponent(EditBox);
         this.btn = this.node.getChildByName("btn").getComponent(Button);
-        this.consumeItem = this.node.getChildByPath("btn/ConsumeItem").addComponent(ConsumeItem);
         this.logoList.SetHandle(this.updateLogoItem.bind(this));
         this.logoList.node.on('select', this.onLogoSelect, this);
         this.logoList.SelectFirst();
@@ -64,36 +66,53 @@ export class GuildCreatPage extends GuildContBase {
         this.logoDatas = CfgMgr.GetGuildLogoList();
         this.logoList.UpdateDatas(this.logoDatas);
         this.stdGuildComm = CfgMgr.GetGuildComm();
-        let consumeList:SThing[] = ItemUtil.GetSThingList(this.stdGuildComm.CreateCostType, this.stdGuildComm.CreateCostID, this.stdGuildComm.CreateCostCount);
-        this.consumeItem.SetData(consumeList[0]);
+        
         this.maxLv = CfgMgr.GetHomeMaxLv();
 
-        this.needApply.node.on(Toggle.EventType.TOGGLE, this.onToggleChange, this);
-        this.noApply.node.on(Toggle.EventType.TOGGLE, this.onToggleChange, this);
+        this.needApplyBtn.node.on(Button.EventType.CLICK, this.onToggleChange, this);
+        this.noApplyBtn.node.on(Button.EventType.CLICK, this.onToggleChange, this);
         this.slider.node.on('slide', this.onSlide, this);
         this.leftBtn.node.on(Button.EventType.CLICK, this.onBtnClick, this);
         this.rightBtn.node.on(Button.EventType.CLICK, this.onBtnClick, this);
         this.btn.node.on(Button.EventType.CLICK, this.onBtnClick, this);
+
+        this.condLab.string = `生命树等级<color=#CA1D1D>${CfgMgr.GetGuildComm().CreateGuildMinHomeLevel}级</color>可创建公会`;
     }
     onShow(): void {
         super.onShow();
+        this.onToggleChange(this.noApplyBtn);
     }
     onHide(): void {
         super.onHide();
     }
-    private onToggleChange(toggle:Toggle):void{
-        this.applyLab.string = this.needApply.isChecked ? "不需要验证" : "需要验证";
+    private onToggleChange(btn:Button):void{
+        if(this.needApplyBtn == btn){
+            this.applyState = 1;
+            SetNodeGray(this.needApplyBtn.node, true);
+            SetNodeGray(this.noApplyBtn.node, false);
+            
+        }else{
+            this.applyState = 0;
+            SetNodeGray(this.needApplyBtn.node, false);
+            SetNodeGray(this.noApplyBtn.node, true);
+        }
+        this.applyLab.string = this.applyState == 1 ? "需要验证" : "不需要验证";
     }
     private onSlide(event: Slider) {
         let tempNum:number = Math.ceil(event.progress * this.maxLv);
         if(tempNum > this.maxLv) tempNum = this.maxLv;
-        this.curLv = tempNum;
+        this.curLv = Math.max(tempNum, 1);
         this.changeSlidePro(2);
         
     }
     private onBtnClick(btn:Button):void{
         switch(btn){
             case this.btn:
+                let homeBuilds:SPlayerDataBuilding[] = PlayerData.GetBuildingByType(BuildingType.ji_di, 101);
+                if(homeBuilds[0].level < CfgMgr.GetGuildComm().CreateGuildMinHomeLevel){
+                    MsgPanel.Show("家园等级不足");
+                    return;
+                }
                 let guildName:string = this.inputName.string;
                 if(guildName == ""){
                     MsgPanel.Show("公会名称不能为空");
@@ -112,18 +131,9 @@ export class GuildCreatPage extends GuildContBase {
                     MsgPanel.Show(`公告内容不得大于${this.stdGuildComm.AnnouncementMaxLen}个字符`);
                     return;
                 }
-                if (!ItemUtil.CheckThingConsumes(this.stdGuildComm.CreateCostType, this.stdGuildComm.CreateCostID, this.stdGuildComm.CreateCostCount, true)) {
-                    //return;
-                }
-                
-                Session.Send({ type: MsgTypeSend.GuildCreate, 
-                    data: {
-                        name: guildName,
-                        logo: this.selectLogoData.ID.toString(),
-                        announcement:{content:notice},
-                        join_criteria:{min_home_level:this.curLv, no_criteria:this.needApply.isChecked ? 1 : 0},
-                    } 
-                });
+                let announcement: SGuildAnnouncement = {content:notice};
+                let join_criteria:SGuildJoinCriteria = {min_home_level:this.curLv, need_applications:this.applyState};
+                GuildCreatPanel.Show(guildName, this.selectLogoData.ID, announcement, join_criteria);
                 break;
             case this.leftBtn:
                 this.changeSlidePro(0);
@@ -135,7 +145,7 @@ export class GuildCreatPage extends GuildContBase {
     }
     private changeSlidePro(type:number):void{
         if(type == 0){
-            if(this.curLv > 1){
+            if(this.curLv > 2){
                 this.curLv --;
             }else{
                 return;

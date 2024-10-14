@@ -270,4 +270,22 @@ export class DateUtils {
     
         return timeStr || "0秒"; // 如果所有单位都是0，则返回"0秒"
     }
+
+
+    static SecondsToHourTime(seconds) {
+        if (typeof seconds !== 'number' || seconds < 0) {
+            return "00:00:00"
+        }
+     
+        seconds = Math.floor(seconds);
+        const hours = Math.floor(seconds / 3600);
+        const minutes = Math.floor((seconds % 3600) / 60);
+        const secs = seconds % 60;
+     
+        const hoursStr = (hours < 10 ? '0' + hours : hours);
+        const minutesStr = (minutes < 10 ? '0' + minutes : minutes);
+        const secsStr = (secs < 10 ? '0' + secs : secs);
+     
+        return `${hoursStr}:${minutesStr}:${secsStr}`;
+     }
 }

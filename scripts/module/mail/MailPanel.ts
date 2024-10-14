@@ -9,7 +9,7 @@ import { MailContentPanel } from "./MailContentPanel";
 import { MsgTypeSend } from "../../MsgType";
 import { Session } from "../../net/Session";
 import { Tips } from "../login/Tips";
-import { UpdateBagItem } from "../common/BaseUI";
+import { AdaptBgTop, UpdateBagItem } from "../common/BaseUI";
 import { DateUtils } from "../../utils/DateUtils";
 import { AudioMgr, Audio_CommonDelete, Audio_OpenMail } from "../../manager/AudioMgr";
 import { CfgMgr, StdCommonType } from "../../manager/CfgMgr";
@@ -102,7 +102,7 @@ export class MailPanel extends Panel {
         item.getChildByName("time").getComponent(Label).string = `${str}`;
         let scroller = item.getChildByName(`itemLayout`).getComponent(AutoScroller);
         scroller.SetHandle(this.UpdateBagItem.bind(this));
-        let reward_data = PlayerData.getMailReward(data.attachments.data);
+        let reward_data = data.attachments.data ? PlayerData.getMailReward(data.attachments.data) : [];
         scroller.UpdateDatas(reward_data);
         let bg = item.getChildByName(`bg`).getComponent(Sprite);
         let mailIcon = item.getChildByName(`mailIcon`).getComponent(Sprite);
@@ -208,6 +208,7 @@ export class MailPanel extends Panel {
     }
 
     public flush(...args: any[]): void {
+        AdaptBgTop(this.find("bg"))
         this.myUidLab.string = `我的UID:${PlayerData.roleInfo.player_id}`;
         let time_data = CfgMgr.GetCommon(StdCommonType.Mail);
         this.deleteTime1 = time_data.DeleteTime1;

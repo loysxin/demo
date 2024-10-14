@@ -310,13 +310,13 @@ export class BattleCalculator{
             };
 
             const defeneFactors = {
-                1: defense.attrs.getSecondaryAttribute(SecondaryAttr.BehitMeat),     // 肉盾克制系数
-                2: defense.attrs.getSecondaryAttribute(SecondaryAttr.BehitWarrior),  // 剑士克制系数
-                3: defense.attrs.getSecondaryAttribute(SecondaryAttr.BehitShooter),  // 弓兵克制系数
-                4: defense.attrs.getSecondaryAttribute(SecondaryAttr.BehitAssist)    // 辅助克制系数
+                1: defense.attrs.getSecondaryAttribute(SecondaryAttr.BehitMeat),     // 肉盾被克制系数
+                2: defense.attrs.getSecondaryAttribute(SecondaryAttr.BehitWarrior),  // 剑士被克制系数
+                3: defense.attrs.getSecondaryAttribute(SecondaryAttr.BehitShooter),  // 弓兵被克制系数
+                4: defense.attrs.getSecondaryAttribute(SecondaryAttr.BehitAssist)    // 辅助被克制系数
             };
 
-            radio = radio + attackFactors[attackerType] - defeneFactors[defenseType];
+            radio = radio + attackFactors[defenseType] - defeneFactors[attackerType];
         } 
 
         return radio;

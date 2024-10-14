@@ -1,17 +1,22 @@
 import { Button, Label, Node, path, ProgressBar, RichText, Sprite, SpriteFrame } from "cc";
 import { Panel } from "../../GameRoot";
-import { EventMgr, Evt_GuildChange, Evt_Hide_Scene, Evt_Show_Scene } from "../../manager/EventMgr";
+import { EventMgr, Evt_GuildChange, Evt_GuildEventUpdate, Evt_Hide_Scene, Evt_Show_Scene } from "../../manager/EventMgr";
 import { AutoScroller } from "../../utils/AutoScroller";
 import { Session } from "../../net/Session";
 import { MsgTypeSend } from "../../MsgType";
 import { GuildInfoPanel } from "./GuildInfoPanel";
-import PlayerData, { SGuild } from "../roleModule/PlayerData";
+import PlayerData, { SGuild, SGuildEvent, SGuildMember } from "../roleModule/PlayerData";
 import { GuildMemberPanel } from "./GuildMemberPanel";
 import { folder_icon, ResMgr } from "../../manager/ResMgr";
-import { CfgMgr, StdGuildLevel, StdGuildLogo } from "../../manager/CfgMgr";
+import { CfgMgr, StdGuildEvent, StdGuildLevel, StdGuildLogo, StdGuildType } from "../../manager/CfgMgr";
 import { GuildAuditPanel } from "./GuildAuditPanel";
 import { GuildDonatePanel } from "./GuildDonatePanel";
 import { GuildManagePanel } from "./GuildManagePanel";
+import { GuildEditNotesPanel } from "./GuildEditNotesPanel";
+import { GuildBankSelectPanel } from "./GuildBankSelectPanel";
+import { GuildRankPanel } from "./GuildRankPanel";
+import { GuildBankPanel } from "./GuildBankPanel";
+import { MsgPanel } from "../common/MsgPanel";
 
 export class GuildPanel extends Panel {
     protected prefab: string = "prefabs/panel/guild/GuildPanel";
@@ -30,6 +35,7 @@ export class GuildPanel extends Panel {
     private msgArrowBtn: Button;
     private guildNameLab:Label;
     private logo:Sprite;
+    private guildType:Sprite;
     private logoBtn:Button;
     private applyBtn:Button;
     private infoBtn:Button;
@@ -40,8 +46,8 @@ export class GuildPanel extends Panel {
     private presidentNameLab:Label;
     private memberLab:Label;
     private noticeLab:RichText;
-
     private msgIsStretch: boolean = false;
+    private eventDatas:SGuildEvent[];
     protected onLoad(): void {
         this.rankBtn = this.find("btnCont/rankBtn", Button);
         this.notesBtn = this.find("btnCont/notesBtn", Button);
@@ -61,6 +67,7 @@ export class GuildPanel extends Panel {
         this.helpBtn = this.find("infoCont/helpBtn", Button);
         this.logo = this.find("infoCont/logo", Sprite);
         this.logoBtn = this.find("infoCont/logo", Button);
+        this.guildType = this.find("infoCont/logo/guildType", Sprite);
         this.lvLab = this.find("infoCont/lvLab", Label);
         this.applyBtn = this.find("infoCont/limitBtnCont/applyBtn", Button);
         this.infoBtn = this.find("infoCont/limitBtnCont/infoBtn", Button);
@@ -84,17 +91,22 @@ export class GuildPanel extends Panel {
     }
     public flush(): void{
         this.updateBaseInfo();
-        this.updateMsgSate();
+        
     }
     
     protected onShow(): void {
+        this.eventDatas = [];
+        this.updateMsgSate();
+        Session.Send({type: MsgTypeSend.GuildGetSelfEvent, data:{}});
         EventMgr.emit(Evt_Hide_Scene, this.node.uuid, this.node.getPathInHierarchy());
         EventMgr.on(Evt_GuildChange, this.onGuildChange, this);
+        EventMgr.on(Evt_GuildEventUpdate, this.onUpdateMsg, this);
     }
 
     protected onHide(...args: any[]): void {
         EventMgr.emit(Evt_Show_Scene, this.node.uuid);
         EventMgr.off(Evt_GuildChange, this.onGuildChange, this);
+        EventMgr.off(Evt_GuildEventUpdate, this.onUpdateMsg, this);
     }
     private onGuildChange():void{
         if(!PlayerData.MyGuild){
@@ -102,6 +114,10 @@ export class GuildPanel extends Panel {
             return;
         }
         this.flush();
+    }
+    private onUpdateMsg(datas:SGuildEvent[]):void{
+        this.eventDatas = datas;
+        this.updateMsgSate();
     }
     private onBtnClick(btn: Button): void {
         switch (btn) {
@@ -120,19 +136,25 @@ export class GuildPanel extends Panel {
                 GuildInfoPanel.Show(PlayerData.MyGuild);
                 break;
             case this.rankBtn:
-            
+                GuildRankPanel.Show();
                 break;
             case this.notesBtn:
-            
+                let memberData:SGuildMember = PlayerData.MyGuild.members[PlayerData.roleInfo.player_id];
+                GuildEditNotesPanel.Show(memberData.message);
                 break;
             case this.memberBtn:
                 GuildMemberPanel.Show(PlayerData.MyGuild);
                 break;
             case this.bankBtn:
-            
+                Session.Send({ type: MsgTypeSend.GuildBankGetDepositInfos, 
+                    data: {
+                        guild_id: PlayerData.MyGuild.guild_id,
+                    } 
+                });
                 break;
             case this.donateBtn:
-                GuildDonatePanel.Show();
+                MsgPanel.Show("功能即将开放");
+                //GuildDonatePanel.Show();
                 break;
             case this.helpBtn:
                 break;
@@ -145,6 +167,7 @@ export class GuildPanel extends Panel {
         this.infoBtn.node.active = PlayerData.GetMyGuildChange();
         this.applyBtn.node.active = PlayerData.GetMyGuildApply();
         let guidData:SGuild = PlayerData.MyGuild;
+        if(!guidData) return;
         this.guildNameLab.string = guidData.name;
         this.presidentNameLab.string = guidData.leader_info.name||"";
         this.noticeLab.string = guidData.announcement.content;
@@ -158,16 +181,26 @@ export class GuildPanel extends Panel {
         ResMgr.LoadResAbSub(url, SpriteFrame, res => {
             this.logo.spriteFrame = res;
         });
+        let stdGuildType:StdGuildType = CfgMgr.GetGuildType(guidData.type);
+        if(stdGuildType.TypeIconRes && stdGuildType.TypeIconRes.length > 0){
+            this.guildType.node.active = true;
+            let url = path.join(folder_icon, `guildLogo/${stdGuildType.TypeIconRes}`, "spriteFrame");
+            ResMgr.LoadResAbSub(url, SpriteFrame, res => {
+                this.guildType.spriteFrame = res;
+            });
+        }else{
+            this.guildType.node.active = false;
+        }
     }
-    private updateMsgItem(item: Node, data: any) {
+    private updateMsgItem(item: Node, data: SGuildEvent) {
         let titleLab: Label = item.getChildByName("titleLab").getComponent(Label);
         let msgLab: RichText = item.getChildByName("msgLab").getComponent(RichText);
-        titleLab.string = data.title;
-        msgLab.string = data.cont;
+        titleLab.string = "公会";
+        msgLab.string = PlayerData.GetGuildEventCont(data);
 
     }
     private updateMsgSate(): void {
-        let msgList: any[] = [];
+        let msgList: SGuildEvent[] = this.eventDatas;
         if (msgList.length) {
             this.msgCont.active = true;
             if (this.msgIsStretch) {
@@ -178,8 +211,8 @@ export class GuildPanel extends Panel {
             } else {
                 this.allMsgCont.active = false;
                 this.aloneMsgCont.active = true;
-                this.msgTitleLab.string = msgList[msgList.length - 1].title;
-                this.msgLab.string = msgList[msgList.length - 1].cont;
+                this.msgTitleLab.string = "公会";
+                this.msgLab.string = PlayerData.GetGuildEventCont(msgList[msgList.length - 1]);
             }
         } else {
             this.msgCont.active = false;

@@ -26,7 +26,8 @@ export enum FishErrorCodeType {
 	FishingErrorFishItemNotFound        = 112, // 鱼类商品未找到
 	FishingErrorShopItemNotFound        = 113, // 商店商品未找到
 	FishingErrorShopItemInvalidBuyCount = 114, // 无效的购买数量
-	FishingErrorInsufficientScore       = 115, //  疲劳值不足
+	FishingErrorInsufficientScore       = 115, // 钓鱼积分不足
+    FishingErrorLevelNotEnough          = 116 // 等级不足
 }
 export class FishingModule{
     private errorStr:{[key: string]: string} = BeforeGameUtils.toHashMapObj(
@@ -40,6 +41,13 @@ export class FishingModule{
         FishErrorCodeType.FishingErrorCostExceedingRoundLimit, "投入超出回合限制",
         FishErrorCodeType.FishingErrorCostExceedingDailyLimit, "投入超出每日限制",
         FishErrorCodeType.FishingErrorBadArg, "参数错误",
+        FishErrorCodeType.FishingErrorFishBagMax, "鱼类背包已满",
+        FishErrorCodeType.FishingErrorNoCost, "未投入任何鱼饵",
+        FishErrorCodeType.FishingErrorFishItemNotFound, "鱼类商品未找到",
+        FishErrorCodeType.FishingErrorShopItemNotFound, "商店商品未找到",
+        FishErrorCodeType.FishingErrorShopItemInvalidBuyCount, "无效的购买数量",
+        FishErrorCodeType.FishingErrorInsufficientScore, "钓鱼积分不足",
+        FishErrorCodeType.FishingErrorLevelNotEnough, "等级不足",
         
     );
     constructor() {
@@ -72,6 +80,7 @@ export class FishingModule{
         console.log("回合数据推送类型---->" + data.type + "----->" + "回合是否开启" + data.state.round_info.is_open + "回合时长--->" + (data.state.round_info.end_time - data.state.round_info.start_time));
         console.log("回合开始时间---->" + data.state.round_info.start_time + "回合冰封时间---->" + data.state.round_info.frozen_time + "回合结算时间---->" + data.state.round_info.settlement_time + "  回合结束时间----->" + data.state.round_info.end_time);
         console.log("当前服务器时间---->" + PlayerData.GetServerTime());
+        console.log("kill_type---->" + data.state.round_info.kill_type);
         let oldRound = PlayerData.CurFishRoundInfo;
         if(oldRound && oldRound.round != data.state.round_info.round){
             Session.Send({type: MsgTypeSend.FishingJoin, data:{}});

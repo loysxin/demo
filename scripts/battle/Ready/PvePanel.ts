@@ -66,9 +66,10 @@ export class PvePanel extends Panel {
     private blcokPosOffset: Vec2[] = [new Vec2(-242, -17), new Vec2(-3, -13), new Vec2(118, 235), new Vec2(-240, 66), new Vec2(9, -124)]
     private sMapScaleY = 1280;
     private sMapScaleX = 1024
-    private xBlock = 8;
+    private xBlock = 11;
     private yBlock = 2;
     private mapNode: Node;
+    private mapClick: Node;
     private chapterOffset: Vec3[]= [];
 
     private levelBattlePower;
@@ -94,10 +95,13 @@ export class PvePanel extends Panel {
     private levelProcess: UITransform;
     private pveConfig;
 
+    private levelPoint: Node;
+
     protected onLoad() {
         this.CloseBy('top/back')
         AdaptBgTop(this.find("middle/mask"));
         this.mapNode = this.node.getChildByName("map");
+        this.mapClick = this.mapNode.getChildByName("click");
         // this.node.getChildByPath('top/back').on(Button.EventType.CLICK, this.Hide, this);
         this._finishLevelContent = this.node.getChildByPath("bottom/finish/view/content");
         this._levelContent = this.node.getChildByPath("bottom/tiaozhan/view/content");
@@ -105,6 +109,7 @@ export class PvePanel extends Panel {
         this._itemPrefab = this.node.getChildByPath("Item/Icon");
         this._finishLevelPrefab = this.node.getChildByPath("Item/levelFinishItem");
         this._levelPrefab = this.node.getChildByPath("Item/levelTiaoZhanItem");
+        this.levelPoint = this.node.getChildByName("level_point");
 
         this.node.getChildByPath("bottom/testLevel").active = false;
         //this.node.getChildByPath("bottom/testLevel").on('editing-return', this.onTestLevel, this);
@@ -121,7 +126,7 @@ export class PvePanel extends Panel {
         this._buzhenBtn.node.on(Button.EventType.CLICK, this.onBtnClick, this);
         this.chapterMask = this.node.getChildByPath("mask");
         this.node.getChildByPath("right/btn").on(Button.EventType.CLICK, ()=>{
-            if(this.showChapter < 5)
+            if(this.showChapter < this.levelPoint.children.length)
                 this.showChapter++;
             this.ScrollChapter();
         }, this);
@@ -156,10 +161,10 @@ export class PvePanel extends Panel {
         this.levelItem_scroller.SetHandle(this.updateLevelItem.bind(this));
         this.levelProcess = this.node.getChildByPath("middle/bg/process").getComponent(UITransform);
 
-        this.mapNode.on(Input.EventType.TOUCH_START, this.onTouchStart, this);
-        this.mapNode.on(Input.EventType.TOUCH_MOVE, this.onTouchMove, this);
-        this.mapNode.on(Input.EventType.TOUCH_END, this.onTouchEnd, this);
-        this.mapNode.on(Input.EventType.TOUCH_CANCEL, this.onTouchEnd, this);
+        this.mapClick.on(Input.EventType.TOUCH_START, this.onTouchStart, this);
+        this.mapClick.on(Input.EventType.TOUCH_MOVE, this.onTouchMove, this);
+        this.mapClick.on(Input.EventType.TOUCH_END, this.onTouchEnd, this);
+        this.mapClick.on(Input.EventType.TOUCH_CANCEL, this.onTouchEnd, this);
 
         let chapterInfo = CfgMgr.GetChapterInfo();
 
@@ -188,7 +193,7 @@ export class PvePanel extends Panel {
 
         if(this.showChapter == 1 && moveX > 250)
             return;
-        if(this.showChapter == 5 && moveX < -250)
+        if(this.showChapter == this.levelPoint.children.length && moveX < -250)
             return;
         
         // 移动地图
@@ -208,7 +213,7 @@ export class PvePanel extends Panel {
             }
             else
             {
-                if(this.showChapter < 5)
+                if(this.showChapter < this.levelPoint.children.length)
                     this.showChapter++;
             }
         }
@@ -225,7 +230,6 @@ export class PvePanel extends Panel {
     }
 
 
-
     protected onShow(...arg: any[]) {
         this.node.active = false;
         this.chapterMask.active = false;
@@ -234,8 +238,16 @@ export class PvePanel extends Panel {
         this._onBattle = false;
         this._pve_data = PlayerData.pveData;
         this.levelInfo = CfgMgr.GetLevel(this._pve_data.progress + 1);
+        if(!this.levelInfo)
+            this.levelInfo = CfgMgr.GetLevel(this._pve_data.progress);
         this.showChapter = this.levelInfo.Chapter;
-        this.nowChapterPos = this.node.getChildByPath(`level_point/level_${this.levelInfo.Chapter}`).getPosition();
+        if(this.levelInfo.Chapter > this.levelPoint.children.length)
+        {
+            console.error("关卡配置错误, 预制体中章节不存在：", this.levelInfo.Chapter);
+            this.showChapter = this.levelPoint.children.length;
+        }
+
+        this.nowChapterPos = this.levelPoint.getChildByName(`level_${this.showChapter}`).getPosition();
         this.mapNode.setPosition(this.nowChapterPos);
         if(this.levelInfo.Chapter != this._nowChapter)
         {
@@ -253,7 +265,7 @@ export class PvePanel extends Panel {
     private loadChapter():void{
         if(!this.birds)
             this.birds = [];
-        for(let i = 1; i <= 5; i++)
+        for(let i = 1; i <= this.levelPoint.children.length; i++)
         {
             let chapter = this.mapNode.getChildByPath(`chapter_info/chapter_${i}`);
             chapter.off(Button.EventType.CLICK);
@@ -261,7 +273,7 @@ export class PvePanel extends Panel {
             let lock = chapter.getChildByName("lock");
             lock.active = i <= this.levelInfo.Chapter ? false : true;
             progress.active = i <= this.levelInfo.Chapter ? true : false;
-            progress.getComponent(Label).string = i < this.levelInfo.Chapter ? "100%" : (i == this.levelInfo.Chapter ? `${Math.floor(this.levelInfo.LevelID - 1 / this._levelCount * 100)}%` : "");
+            progress.getComponent(Label).string = i < this.levelInfo.Chapter ? "100%" : (i == this.levelInfo.Chapter ? `${Math.floor((this.levelInfo.LevelID - 1) / this._levelCount * 100)}%` : "");
             if(this.chapterNames.hasOwnProperty(i))
             {
                 chapter.getChildByName("text").getComponent(Label).string = this.chapterNames[i].name;
@@ -453,9 +465,9 @@ export class PvePanel extends Panel {
         }
         EventMgr.emit(Evt_PveMaploadFinish);
 
-        if(this._nowLevel != this.levelInfo.LevelID)
+        if(this._nowLevel != this.levelInfo.ID)
         {
-            this._nowLevel = this.levelInfo.LevelID;
+            this._nowLevel = this.levelInfo.ID;
             this._levelContent.removeAllChildren();
             this._finishLevelContent.removeAllChildren();
 
@@ -479,7 +491,7 @@ export class PvePanel extends Panel {
 
             // }
 
-            for(let i = 1; i <= this._levelCount - this._nowLevel; i++)
+            for(let i = 1; i <= this._levelCount - this.levelInfo.LevelID; i++)
             {
                 let nextLevelInfo = CfgMgr.GetLevel(this._nowLevel + i);
                 let level = instantiate(this._levelPrefab);
@@ -505,6 +517,8 @@ export class PvePanel extends Panel {
 
     private updateLevelInfo(node: Node, levelInfo: StdLevel)
     {
+        if(!levelInfo) return;
+
         node.getChildByName("next").active = levelInfo.LevelID != this._levelCount;
 
         switch(levelInfo.LevelType)
@@ -602,6 +616,7 @@ export class PvePanel extends Panel {
         let chapter = this.mapNode.getChildByName("chapter_info");
         chapter.setSiblingIndex(this.mapNode.children.length - 1);
         chapter.active = true;
+        this.mapClick.setSiblingIndex(this.mapNode.children.length - 1);
     }
 
     _BirdMove(bird: BirdInfo, dt) {

@@ -3,7 +3,7 @@ import { AutoScroller } from "../../../utils/AutoScroller";
 import PlayerData, { CountPower, SAssistRoleInfo, SPlayerDataRole } from "../../roleModule/PlayerData";
 import { ResMgr, folder_common, folder_icon, folder_item, folder_quality } from "../../../manager/ResMgr";
 import { Attr, AttrFight, CardQuality, CfgMgr, OneOffRedPointId, StdCommonType } from "../../../manager/CfgMgr";
-import { FormatAttr, FormatRoleAttr, GetAttrValue, GetAttrValueByIndex, UpdateAttrItem } from "../../common/BaseUI";
+import { AttrSub, FormatAttr, FormatRoleAttr, GetAttrValue, GetAttrValueByIndex, UpdateAttrItem } from "../../common/BaseUI";
 import { countDown2, maxx } from "../../../utils/Utils";
 import { EventMgr, Evt_FlushWorker, Evt_LoginRedPointUpdate, Evt_Passive_Skill_Update, Evt_Role_Upgrade, Evt_RoleAttack } from "../../../manager/EventMgr";
 import { TradeHeroPanel } from "../../trade/TradeHeroPanel";
@@ -55,6 +55,7 @@ export class Card extends Component {
     private friendData:SAssistRoleInfo;
     private showType:CardType;
     private timedata:number;
+    private is_ji_di:boolean;
     protected onLoad(): void {
         this.frame = this.node.getChildByName("bg").getComponent(Sprite);
         this.bgEffect = this.node.getChildByName("bgEffect").getComponent(sp.Skeleton);
@@ -137,21 +138,16 @@ export class Card extends Component {
         }
     }
 
-    private setAssistInfo(data?){
-        this.assistInfo.active = true;
-        this.assist_count.string = 10 + ""
-        this.assist_cost.string = 10 + ""
-        this.stateCont.active = false;
-    }
     /**
      * 设置角色数据
      * @param data 
      */
-    async SetData(data: { role: SPlayerDataRole, select: boolean }, type: CardType = CardType.Role, is_assist?:boolean, friend?:SAssistRoleInfo, role_info_call_back?:Function) {
+    async SetData(data: { role: SPlayerDataRole, select: boolean }, type: CardType = CardType.Role, is_assist?:boolean, friend?:SAssistRoleInfo, role_info_call_back?:Function, is_ji_di?:boolean) {
         if (!this.hasLoad) await this.loadSub;
         this.showType = type;
         this.roleInfoCallBack = role_info_call_back;
         this.is_assist = is_assist;
+        this.is_ji_di = is_ji_di;
         if(friend){
             this.friendData = friend;
         }
@@ -215,20 +211,29 @@ export class Card extends Component {
             this.updateRoleState();
         } else if (this.showType == CardType.Work) {
             // 工作
-            this.attrScroller.node.active = true;
-            const ls: number[] = CfgMgr.GetCommon(StdCommonType.Home).ShowAttr;
-            let spr = ["quanneng", "mucai", "shui", "shitou", "zhongzi"]
             let datas = [];
-            let index = 0
-            for (let id of ls) {
-                let data = FormatAttr(id, false);
-                let value = GetAttrValueByIndex(this.role as SPlayerDataRole, id);
-                if (value != 0) {
-                    data.icon = path.join(folder_item, spr[index], "spriteFrame")
-                    data.value = value;
-                    datas.push(data);
+            this.attrScroller.node.active = true;
+            if(!this.is_ji_di){
+                const ls: number[] = CfgMgr.GetCommon(StdCommonType.Home).ShowAttr;
+                let spr = ["quanneng", "mucai", "shui", "shitou", "zhongzi"]
+                let index = 0
+                for (let id of ls) {
+                    let data = FormatAttr(id, false);
+                    let value = GetAttrValueByIndex(this.role as SPlayerDataRole, id);
+                    if (value != 0) {
+                        data.icon = path.join(folder_item, spr[index], "spriteFrame")
+                        data.value = value;
+                        datas.push(data);
+                    }
+                    index++;
                 }
-                index++;
+            }else{
+                let data: AttrSub = { icon: path.join(folder_item, "qianghuashi", "spriteFrame"), name: "", value: 0, next: 0, per: "" };
+                let cfg = CfgMgr.GetProduceCasting(this.role.type, this.role.quality);
+                if(cfg){
+                    data.value = cfg.produce_casting
+                }
+                datas.push(data);
             }
             this.attrScroller.UpdateDatas(datas);
             this.skillScroller.node.active = false;

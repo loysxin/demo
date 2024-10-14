@@ -72,10 +72,13 @@ export class FishingRankPanel extends Panel {
             },
         ];
         let rankList:SFishingRankPlayerInfoData[] = [];
+        let playerList;
         if(this.rankType == 1){
-            rankList = this.data.cost_rank.top_rank_players.concat();
+            playerList = this.data.cost_rank.top_rank_players || [];
+            rankList = playerList.concat();
         }else if(this.rankType == 2){
-            rankList = this.data.lose_cost_rank.top_rank_players.concat();
+            playerList = this.data.lose_cost_rank.top_rank_players || [];
+            rankList = playerList.concat();
         }
         let myRankData:SFishingRankPlayerInfoData = {
             player_id:PlayerData.roleInfo.player_id,
@@ -120,6 +123,7 @@ export class FishingRankPanel extends Panel {
     }
     protected update(dt: number): void {
         if(this.data){
+            if(!this.timeLab) return;
             let residueTime:number = Math.max(Math.floor(this.data.refresh_time - PlayerData.GetServerTime()), 0);
             if(residueTime > 86400){
                 this.timeLab.string = "刷新时间：" + DateUtils.FormatTime(residueTime, "%{d}天%{hh}:%{mm}:%{ss}");

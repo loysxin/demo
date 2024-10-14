@@ -2,11 +2,11 @@ import { MsgTypeRet, MsgTypeSend } from "../../MsgType";
 import { Session } from "../../net/Session";
 import { HomeLogic } from "./HomeLogic";
 import { HomeUI } from "./panel/HomeUI";
-import PlayerData, { BoostType, FightState, NoticeData, PlayerDataMap, SAdvister, SBattleRole, SBoostStruct, SPlayerDataBuilding, SPlayerDataHomeland, SPlayerDataItemProduction, SPlayerDataRole, SThing } from "../roleModule/PlayerData";
-import { Evt_Building_Upgrade, Evt_Building_Upgrade_Complete, EventMgr, Evt_FlushWorker, Evt_Production_Update, Evt_Defense, Evt_HomeLand_Unlock, Evt_Soldier_JiaSu, Evt_Currency_Updtae, Evt_Res_Update, Evt_ConfigData_Update, Evt_RoleAttack, Evt_Hide_Scene, Evt_Show_Scene, Evt_Show_Home_Ui, Evt_Hide_Home_Ui, Evt_Production_JiaSu, Evt_NextDay, Evt_AdvisterUpdate, Evt_Collect_Update } from "../../manager/EventMgr";
+import PlayerData, { BoostType, FightState, NoticeData, PlayerDataMap, SAdvister, SBattleRole, SBoostStruct, SPlayerDataBuilding, SPlayerDataHomeland, SPlayerDataItem, SPlayerDataItemProduction, SPlayerDataRole, SThing } from "../roleModule/PlayerData";
+import { Evt_Building_Upgrade, Evt_Building_Upgrade_Complete, EventMgr, Evt_FlushWorker, Evt_Production_Update, Evt_Defense, Evt_HomeLand_Unlock, Evt_Soldier_JiaSu, Evt_Currency_Updtae, Evt_Res_Update, Evt_ConfigData_Update, Evt_RoleAttack, Evt_Hide_Scene, Evt_Show_Scene, Evt_Show_Home_Ui, Evt_Hide_Home_Ui, Evt_Production_JiaSu, Evt_NextDay, Evt_AdvisterUpdate, Evt_Collect_Update, Evt_ReLogin, Evt_Building_Action, Evt_Building_Complete, Evt_FlushJiDiReward } from "../../manager/EventMgr";
 import Logger from "../../utils/Logger";
 import { BuildCompletedPanel } from "../common/BuildCompletedPanel";
-import { BuildingType, CanSet } from "./HomeStruct";
+import { BuildingType, CanSet, SPlayerDataFusionStone } from "./HomeStruct";
 import { AdvisterId, CfgMgr, MessagId, StdAdvister, StdDefineBuilding, StdTask, SysMessagType } from "../../manager/CfgMgr";
 import { ProductionModule } from "../production/ProductionModule";
 import { ProductionPanel } from "../production/ProductionPanel";
@@ -15,22 +15,25 @@ import { HomeScene } from "./HomeScene";
 import { LoginPanel } from "../login/LoginPanel";
 import { SceneCamera } from "../SceneCamera";
 import { MarqueePanel } from "./panel/MarqueePanel";
-import { Http, SendGetAllNotice } from "../../net/Http";
+import { Http, SendGetAllNotice, SendGetAllNoticeJy } from "../../net/Http";
 import { NoticePanel } from "../notice/NoticePanel";
 import TimerMgr from "../../utils/TimerMgr";
 import { GameSet } from "../GameSet";
 import { ServerPanel } from "../login/ServerPanel";
-import { Second } from "../../utils/Utils";
+import { PI2, Second } from "../../utils/Utils";
 import { MsgPanel } from "../common/MsgPanel";
 import { ItemUtil } from "../../utils/ItemUtils";
 import { RewardTips } from "../common/RewardTips";
 import { DateUtils } from "../../utils/DateUtils";
+import { Input, Scene, Sprite, SpriteFrame, Tween, find, instantiate, path } from "cc";
+import { ResMgr } from "../../manager/ResMgr";
 
 let hide_scene: { [key: string]: string } = {};
 let hide_home_ui: { [key: string]: string } = {};
 
 export class HomeModule {
     private isNextDay: boolean = false;
+    private timeout
     constructor() {
         new HomeLogic();
         Session.on(MsgTypeRet.DailyRefreshPush, this.onDailyRefreshPush, this);
@@ -55,10 +58,13 @@ export class HomeModule {
         Session.on(MsgTypeRet.SystemMessagePush, this.onSystemMessagePush, this);
         Session.on(MsgTypeRet.GetAllDailyAdCountsRet, this.onAdvisterInit, this);
         Session.on(MsgTypeRet.AdCountChangePush, this.onAdvisterPush, this);
+        Session.on(MsgTypeRet.CollectFusionStonesRet, this.getCollectFusionStones, this);//熔铸石领取
+        Session.on(MsgTypeRet.FusionStoneDataPush, this.flushStates1, this);//熔铸石推送
         EventMgr.on(Evt_Show_Scene, this.onShowScene, this);
         EventMgr.on(Evt_Hide_Scene, this.onHideScene, this);
         EventMgr.on(Evt_Show_Home_Ui, this.onShowHomeUI, this);
         EventMgr.on(Evt_Hide_Home_Ui, this.onHideHomeUI, this);
+        EventMgr.on(Evt_Building_Complete, this.onFlushJidi, this);
     }
 
     protected onShowScene(key: string) {
@@ -79,6 +85,7 @@ export class HomeModule {
     }
     protected onHideScene(key: string, path?: string) {
         if (!PlayerData.RunHomeId) return;
+        console.log("onHideScene", key, path);
         HomeScene.ins.Visible(false);
         SceneCamera.mask(true);
         hide_scene[key] = path || key;
@@ -101,6 +108,11 @@ export class HomeModule {
         HomeUI.Visible(false);
         hide_home_ui[key] = path || key;
     }
+    protected onFlushJidi(buildingId: number, buildingType: number) {
+        if (buildingType == BuildingType.ji_di) {
+            this.flushStates();
+        }
+    }
 
     onDailyRefreshPush() {
         this.isNextDay = true;
@@ -112,13 +124,15 @@ export class HomeModule {
     }
 
     onRoleData(data: any) {
-        
+
         LoginPanel.Hide();
         ServerPanel.Hide();
         PlayerData.SetPlayerInfo(data);
+        console.log(data)
         PlayerData.ResetChannelMsg();
         PlayerData.ResetOneOffRedPoint();
         let result = InitGameData(data.config_data);
+        console.log("onRoleData", GameSet.Reconnect, PlayerData.fightState, FightState.None);
         if (!GameSet.Reconnect && PlayerData.fightState == FightState.None) this.EnterGame();
         if (result) EventMgr.emit(Evt_ConfigData_Update);
         //获取广告数据
@@ -152,6 +166,7 @@ export class HomeModule {
         Session.Send({ type: MsgTypeSend.FishingShopGetContent, data: {} });
         //获取公会数据
         Session.Send({ type: MsgTypeSend.GuildGetSelf, data: {} });
+        
         this.sendNotice();
 
     }
@@ -159,7 +174,8 @@ export class HomeModule {
      * 请求公告数据
      */
     private async sendNotice(): Promise<void> {
-        let noticeDatas = await Http.Send(SendGetAllNotice, {});
+        let getAllNotice = GameSet.Server_cfg.Mark ? SendGetAllNoticeJy : SendGetAllNotice;
+        let noticeDatas = await Http.Send(getAllNotice, {});
         if (!noticeDatas) return;
         let list: NoticeData[] = noticeDatas["data"] || [];
 
@@ -229,10 +245,13 @@ export class HomeModule {
     }
 
     async EnterGame() {
+        find("Canvas/bg").active = false;
         Logger.log("进入场景");
         HomeUI.ShowUI();
         let homeId = GetGameData(PlayerDataMap.PrevHomeId) || 101;
         HomeLogic.ins.EnterMyHomeScene(homeId);
+        EventMgr.emit(Evt_Show_Home_Ui);
+        EventMgr.emit(Evt_Show_Scene);
     }
     Update() {
     }
@@ -297,7 +316,6 @@ export class HomeModule {
         } else {
             this.onBuildingUnLock(data);
         }
-
     }
 
     onSetDefenseRolesRet(data: { lineup: SBattleRole[] }) {
@@ -452,5 +470,77 @@ export class HomeModule {
         }
         PlayerData.UpdateAdvisterData(data.ad_type, data.new_count);
         EventMgr.emit(Evt_AdvisterUpdate);
+    }
+
+
+    private getCollectFusionStones(data){
+        // console.log("奖励返回", data.collected_stones)
+        let reward_data:SPlayerDataItem[] = [{id: 36, count: data.collected_stones}]
+        RewardTips.Show(reward_data);
+    }
+
+    private flushStates1(data){
+        PlayerData.roleInfo.fusion_stone_data = data.fusionStoneData;
+        // console.log("推送", data)
+        EventMgr.emit(Evt_FlushJiDiReward, data.building_id);
+        this.flushStates();
+    }
+
+
+     /**
+     * 更新基地生产状态
+     * @returns 
+     */
+     protected async flushStates() {
+        let homeId = PlayerData.RunHomeId;
+        let defs = CfgMgr.GetBuildingDefine(homeId, BuildingType.ji_di);
+        if (!defs.length || PlayerData.fightState == FightState.PvP) return;
+        for (let stdDef of defs) {        
+            let building = await HomeScene.ins.GetBuilding(stdDef.BuildingId);
+            let seed = building.seed;
+            let qipao = building.find("qipao")
+            building.HideSub.then(now => {
+                if (seed != now || !qipao) return;
+                for (let child of qipao.children) {
+                    child.active = false;
+                }
+                qipao.off(Input.EventType.TOUCH_END);
+            })
+            //获取基地的生产奖励
+            let ids = Object.keys(PlayerData.roleInfo.fusion_stone_data.amount);
+            qipao.off(Input.EventType.TOUCH_END);
+            if (ids.length <= 0 || PlayerData.roleInfo.fusion_stone_data.amount[BuildingType.ji_di] <= 0) {
+                Tween.stopAllByTarget(qipao);
+                qipao.active = false;
+            } else {
+                if (!qipao.active) {
+                    qipao.active = true;
+                }
+                
+                qipao.on(Input.EventType.TOUCH_END, e => {
+                        let data = {
+                            type: MsgTypeSend.CollectFusionStonesRequest,
+                            data: {
+                                building_id: stdDef.BuildingId
+                            }
+                        }
+                        Session.Send(data);
+                    }
+                , this);
+                let children = qipao.children;
+                children.forEach(value => { value.active = false; });
+                for (let i = 0; i < ids.length; i++) {
+                    let icon = children[i]
+                    if (!icon) {
+                        icon = instantiate(children[0]);
+                        qipao.addChild(icon);
+                    } 
+                    icon.active = true;
+                    ResMgr.LoadResAbSub(path.join("sheets/items", "qianghuashi", "spriteFrame"), SpriteFrame, res => {
+                        icon.getComponent(Sprite).spriteFrame = res;
+                    });
+                }
+            }
+        }
     }
 }

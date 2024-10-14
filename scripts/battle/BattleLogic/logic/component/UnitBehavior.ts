@@ -1,5 +1,4 @@
 import { Runtime } from "../../Runtime";
-import { Timeline } from "../../tool/timeline/Timeline";
 import FixedMaths from '../../base/fixed/FixedMaths'
 import { Unit } from "../actor/Unit";
 import { Component } from "./Component";
@@ -61,6 +60,7 @@ export class UnitBehavior extends Component
                 this.skills.push(skill);
             }
         }
+
         if(this.owner.passiveSkills)
         {
             for (let i = 0; i < this.owner.passiveSkills.length; ++i) {

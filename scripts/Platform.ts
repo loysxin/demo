@@ -1,7 +1,7 @@
 import { Canvas, Event, Game, Node, NodeEventType, RenderTexture, SpriteFrame, Texture2D, game, native, profiler } from "cc";
 import { ANDROID, DEBUG, DEV, HUAWEI, IOS } from "cc/env";
 import { GameSet } from "./module/GameSet";
-import { EventMgr, Evt_Layout_Status_Bar } from "./manager/EventMgr";
+import { EventMgr, Evt_Hide_Scene, Evt_Layout_Status_Bar, Evt_ReLogin } from "./manager/EventMgr";
 import { AdHelper } from "./AdHelper";
 import { copyToClip } from "./utils/Utils";
 import LocalStorage from "./utils/LocalStorage";
@@ -18,6 +18,8 @@ let jsbInit = false;
 let initSuccess: Function;
 let initPromise: Promise<any>;
 let appInfo: {
+    versionCode:string,
+    versionName:string,
     accountId: string,
     avatar: string,
     distinctId: string,
@@ -61,7 +63,7 @@ export const Api_Check_Permission: string = "api_check_permission";
 export const Api_Share: string = "api_share";
 export const Api_User_Profile: string = "user_profile";
 
-export const GameVer: string = "v1.0.0.1793";//游戏版本号
+export const GameVer: string = "v1.0.0.2267";//游戏版本号
 
 let adcfg: {
     readonly cpId: any;
@@ -194,7 +196,11 @@ export class Platform {
                                 CallApp({ api: Api_Login_Init, appid: "zljq" });
                                 break;
                             case Api_Login_Channel:
-                                channelInfo = JSON.parse(json.data);
+                                let loginInfo = JSON.parse(json.data);
+                                if (IOS && channelInfo && channelInfo.token != loginInfo.token && GameSet.intoGame) {
+                                    EventMgr.emit("logout_game");
+                                }
+                                channelInfo = loginInfo;
                                 LocalStorage.SetString("login_channel", json.data);
                                 break;
                             case Api_Token_Expired:
@@ -248,6 +254,16 @@ export class Platform {
                                 if (json.data == "up") {
                                     EventMgr.emit("app_touch_up");
                                 }
+                                break;
+                            case "sdk_logout":
+                                LocalStorage.RemoveItem("login_channel");
+                                channelInfo = null;
+                                EventMgr.emit("logout_game");
+                                break;
+                            case "change_account":
+                                EventMgr.emit("logout_game");
+                                channelInfo = JSON.parse(json.data);
+                                LocalStorage.SetString("login_channel", json.data);
                                 break;
                             default:
 
@@ -326,6 +342,16 @@ export function GetNickName() {
 export function GetInviteCode() {
     if (!appInfo) return undefined;
     return appInfo.inviteCode;
+}
+
+export function GetVersionCode() {
+    if (!appInfo) return undefined;
+    return appInfo.versionCode;
+}
+
+export function GetVersionName() {
+    if (!appInfo) return "1.0.9999999999";
+    return appInfo.versionName;
 }
 
 let apiCallbacks: { [api: string]: Function } = {};

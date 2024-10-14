@@ -1,6 +1,8 @@
 import { Canvas, Node, UITransform, View, find, game } from "cc";
 export type ServerCfg = {
     Host?: string,
+    Rank?: string,
+    AppId?:string,
     state?: number,
     Mark?: string,
     msg?: string,
@@ -137,6 +139,8 @@ export class GameSet {
     static Reconnect = false;
 
     static maxConcurrency = 12;
+
+    static intoGame = false;
 
     static ForBack: () => string = function () { return ""; };
 }

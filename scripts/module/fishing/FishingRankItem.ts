@@ -1,6 +1,6 @@
 import { Component, Label, Sprite } from "cc";
 import { ConsumeItem } from "../common/ConsumeItem";
-import PlayerData, { SFishingRankPlayerInfoData, SSimpleData } from "../roleModule/PlayerData";
+import PlayerData, { SFishingRankPlayerInfoData, SPlayerViewInfo } from "../roleModule/PlayerData";
 import { ItemUtil } from "../../utils/ItemUtils";
 import { CfgMgr, ThingType } from "../../manager/CfgMgr";
 import { HeadItem } from "../common/HeadItem";
@@ -38,13 +38,11 @@ export class FishingRankItem extends Component {
         if(this.rankType == 1 || this.rankType == 2){
             this.consumeItem.SetData(ItemUtil.CreateThing(ThingType.ThingTypeItem, CfgMgr.GetFishCommon.CostItemID, this.data.score));
         }else{
-
+            
         }
-        let data:SSimpleData = {
-            player_id:PlayerData.roleInfo.player_id,
-            name:PlayerData.roleInfo.name,
-            weChatNum:PlayerData.roleInfo.weChatNum,
-            qqNum:PlayerData.roleInfo.qqNum,
+        let data:SPlayerViewInfo = {
+            player_id:this.data.player_id,
+            
         };
         this.head.SetData(data);
         

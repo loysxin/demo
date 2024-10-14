@@ -6,6 +6,8 @@ import { RankTopItem } from "./RankTopItem";
 import { EventMgr, Evt_Hide_Scene, Evt_Show_Scene } from "../../manager/EventMgr";
 import PlayerData, { SRankData, SRankType } from "../roleModule/PlayerData";
 import { Http, SendGetRankData } from "../../net/Http";
+import { GameSet } from "../GameSet";
+import { AdaptBgTop } from "../common/BaseUI";
 enum RankTabType {
     Page_RankFight,//战力排行页
     Page_RankLevel,//等级排行页
@@ -58,6 +60,7 @@ export class RankPanel extends Panel {
     }
 
     protected onShow(): void {
+        AdaptBgTop(this.find("titleCont"))
         EventMgr.emit(Evt_Hide_Scene, this.node.uuid, this.node.getPathInHierarchy());
     }
 
@@ -187,7 +190,11 @@ export class RankPanel extends Panel {
      */
     private async sendRandData(): Promise<void> {
         let playerId = PlayerData.roleInfo.player_id
-        let rankDatas = await Http.Send(SendGetRankData, { rank_type: this.curRankType, page: 1, page_size: 100, player_id: playerId });
+        // console.log(  GameSet.Server_cfg.Rank)
+        // let getRankData = GameSet.Server_cfg.Rank ? SendGetRankDataJy : SendGetRankData;
+        let data:any = SendGetRankData;
+        data.serverUrl = GameSet.Server_cfg.Rank;
+        let rankDatas = await Http.Send(data, { rank_type: this.curRankType, page: 1, page_size: 100, player_id: playerId });
         if (!rankDatas) return;
         this.rankData = rankDatas["data"].rankings || [];
         this.myRank = rankDatas["data"].player_rank;

@@ -192,11 +192,38 @@ export const MsgTypeSend = {
     GuildChangeMemberRole:"13_GuildChangeMemberRole",
     /** 会长转让*/
     GuildChangeMemberLeader:"13_GuildChangeMemberLeader",
-    /**权益领取 */
+    /**修改公会公告 */
+    GuildChangeAnnouncement:"13_GuildChangeAnnouncement",
+    /**修改公会logo */
+    GuildChangeLogo:"13_GuildChangeLogo",
+    /**修改公会名称 */
+    GuildChangeName:"13_GuildChangeName",
+    /**修改公会加入条件 */
+    GuildChangeJoinCriteria:"13_GuildChangeJoinCriteria",
+    /**公会心情留言 */
+    GuildChangeSelfMessage:"13_GuildChangeSelfMessage",
+    /**获取公会申请记录 */
+    GuildGetSelfApplications:"13_GuildGetSelfApplications",
+    /**获取申请加入者列表 */
+    GuildGetApplications:"13_GuildGetApplications",
+    /**审批申请者*/
+    GuildApprovalApplications:"13_GuildApprovalApplications",
+    /**请求公会排行榜数据*/
+    GuildGetRankingList:"13_GuildGetRankingList",
+    /**请求公会银行数据 */
+    GuildBankGetDepositInfos:"13_GuildBankGetDepositInfos",
+    /**请求公会银行储蓄 */
+    GuildBankDeposit:"13_GuildBankDeposit",
+    /**公会银行储蓄查询 */
+    GuildBankGetDonateDeposits:"13_GuildBankGetDonateDeposits",
+    /**权益领取*/
     ClaimDailyBenefitRequest:"1_ClaimDailyBenefit",
     /**使用广告权益 */
     UseRightsAdRequest:"4_UseRightsAd",
-    
+    /**查看玩家 */
+    GetPlayerViewInfo:"8_GetPlayerViewInfo",
+    /**领取熔铸石 */
+    CollectFusionStonesRequest:"1_CollectFusionStones"
 }
 
 export const MsgTypeRet = {
@@ -315,11 +342,30 @@ export const MsgTypeRet = {
     GuildSearchByNameRet:"GuildSearchByNameRet",//搜索公会名字返回
     GuildJoinRet:"GuildJoinRet",//加入公会返回
     GuildLeaveRet:"GuildLeaveRet",//推出公会返回
-    GuildKickRet:"GuildKickRet",//公会踢人返回
+    GuildKickRet:"GuildKickRet",//公会主动踢人返回
+    GuildKickPush:"GuildKickPush",//公会被踢出返回
     GuildChangeMemberRoleRet:"GuildChangeMemberRoleRet",//修改成员身份
     GuildChangeMemberLeaderRet:"GuildChangeMemberLeaderRet", //会长转让
+    GuildChangeAnnouncementRet:"GuildChangeAnnouncementRet",//修改公告响应
+    GuildChangeLogoRet:"GuildChangeLogoRet",//修改logo响应
+    GuildChangeNameRet:"GuildChangeNameRet",//修改公会名称响应
+    GuildChangeJoinCriteriaRet:"GuildChangeJoinCriteriaRet",//修改公会加入条件响应
+    GuildChangeSelfMessageRet:"GuildChangeSelfMessageRet",//修改公会心情留言返回
+    GuildGetSelfApplicationsRet:"GuildGetSelfApplicationsRet",//申请公会记录列表返回
+    GuildApprovalApplicationsRet:"GuildApprovalApplicationsRet",//审批响应
+    GuildGetApplicationsRet:"GuildGetApplicationsRet",//公会待申请列表返回
+    GuildBankGetDepositInfosRet:"GuildBankGetDepositInfosRet",//公会银行数据返回
+    GuildBankDepositRet:"GuildBankDepositRet",//公会银行储蓄返回
+    GuildBankGetDonateDepositsRet:"GuildBankGetDonateDepositsRet",//公会银行储蓄查询
+    GuildGetRankingListRet:"GuildGetRankingListRet",//公会排行榜数据下发
+    GuildMemberChangePush:"GuildMemberChangePush",//公会成员更新
+    GuildJoinPush:"GuildJoinPush",//加入公会通知
+    GuildInfoChangePush:"GuildInfoChangePush",//公会基础信息变更
     BenefitPush:"BenefitPush",//权益推送
     ClaimDailyBenefitRet:"ClaimDailyBenefitRet",//权益领取返回
-    UseRightsAdRet:"UseRightsAdRet"//使用广告权益返回
+    UseRightsAdRet:"UseRightsAdRet",//使用广告权益返回
+    GetPlayerViewInfoRet:"GetPlayerViewInfoRet",//查看玩家数据返回
+    CollectFusionStonesRet:"CollectFusionStonesRet",//领取熔铸石返回
+    FusionStoneDataPush:"FusionStoneDataPush",//采集熔铸石推送
     
 }

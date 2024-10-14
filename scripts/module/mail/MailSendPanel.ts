@@ -4,7 +4,7 @@ import { EventMgr, Evt_Item_Change, Evt_Mail_Update, Evt_SendMail } from "../../
 import { MsgTypeSend } from "../../MsgType";
 import { Session } from "../../net/Session";
 import PlayerData, { SMailPlayerData } from "../roleModule/PlayerData";
-import { CfgMgr, StdCommonType } from "../../manager/CfgMgr";
+import { CfgMgr, GuildEquityId, StdCommonType } from "../../manager/CfgMgr";
 import { GetNumberAccuracy, ToFixed } from "../../utils/Utils";
 import { Tips } from "../login/Tips";
 
@@ -79,7 +79,7 @@ export class MailSendPanel extends Panel {
                 amount: Number(this.EditBox.string),        // 数量
             }
         }
-        Session.Send(data);
+        Session.Send(data, MsgTypeSend.SendCurrencyMail, 5000);
     }
 
     private onEditEnd() {
@@ -117,13 +117,20 @@ export class MailSendPanel extends Panel {
         this.EditBox.string = ``;
         this.surePanel.active = false;
         let is_has_rights = PlayerData.GetIsActivateRights();
-        console.log("is_has_rights", is_has_rights);
+        // console.log("is_has_rights", is_has_rights);
+        let cost = 0
         if (is_has_rights) {
-            this.MailCost = CfgMgr.getEquityListById(3).Value;
+            this.MailCost = CfgMgr.getEquityListById(3).Value;     
         } else {
             this.MailCost = CfgMgr.GetCommon(StdCommonType.Mail).MailCost;
         }
-        this.RichText.string = `<color=#DD6E24>${CfgMgr.GetCommon(StdCommonType.Mail).Min}</color><color=#849AA7>起赠额外消耗赠送数量的</color><color=#DD6E24>${this.MailCost * 100}%</color><color=#849AA7>作为手续费</color>`
+        cost = this.MailCost
+        let is_has_guild_rights =  PlayerData.GetMyGuildPrivilegeById(GuildEquityId.GuildEquity_1);
+        // console.log(is_has_guild_rights)
+        this.MailCost = is_has_guild_rights ? 0 : this.MailCost;
+        let str = is_has_guild_rights ? "（<color=#DD6E24>0%</color>公会职位减免）" : ""
+        this.RichText.string = `<color=#DD6E24>${CfgMgr.GetCommon(StdCommonType.Mail).Min}</color><color=#849AA7>起赠，额外消耗赠送数量的</color><color=#DD6E24>${cost * 100}%</color><color=#849AA7>${str}作为手续费</color>`
+        
     }
 
     public flush(data: SMailPlayerData): void {

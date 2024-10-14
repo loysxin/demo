@@ -59,12 +59,31 @@ export class FishingLogItem extends Component {
         if (!this.hasLoad) await this.loadSub;
         console.log(`第${data.round}期 钓鱼记录时间戳 ${data.start_time}`);
         let stdLake:StdLake = CfgMgr.GetStdLake(data.lake_id);
-        let icedStdLake:StdLake = CfgMgr.GetStdLake(data.frozen_lake_id);
-        this.phaseLab.string = `<size=30>第<size=40>${data.round}</size>期</size>`;
+        
+        
         let dates:string[] = DateUtils.TimestampToDate(data.start_time * 1000, true);
         this.timeLab.string = `${dates[0]}-${dates[1]}-${dates[2]}  ${dates[3]}:${dates[4]}:${dates[5]}`;
         this.fishLakeNameLab.string = `钓鱼湖泊：${stdLake.Lakesname}`;
-        this.icedLakeNameLab.string = icedStdLake.Lakesname;
+        let nameStr:string = "";
+        let icedStdLake:StdLake;
+        if(!data.frozen_lake_ids || data.frozen_lake_ids.length < 1){
+            data.frozen_lake_ids = [];
+            data.frozen_lake_ids.push(data.frozen_lake_id);
+        } 
+        for (let index = 0; index < data.frozen_lake_ids.length; index++) {
+            icedStdLake = CfgMgr.GetStdLake(data.frozen_lake_ids[index])
+            nameStr += icedStdLake.Lakesname;
+            if(index < data.frozen_lake_ids.length -1 ){
+                nameStr += " ";
+            }
+        }
+        if(data.frozen_lake_ids && data.frozen_lake_ids.length > 1){
+            this.phaseLab.string = `<size=30>第<size=40>${data.round}</size>期   地狱模式</size>`;
+        }else{
+            this.phaseLab.string = `<size=30>第<size=40>${data.round}</size>期</size>`;
+        }
+        
+        this.icedLakeNameLab.string = nameStr;
         this.winFlag.active = false;
         this.loseFlag.active = false;
         this.consumeNumLab.string = data.cost.toString();

@@ -1,9 +1,8 @@
 import { Button, Component, Label, path, Sprite, SpriteFrame, Node, UITransform, v3, Vec3 } from "cc";
 import { HeadItem } from "../common/HeadItem";
-import PlayerData, { SGuildMember } from "../roleModule/PlayerData";
+import PlayerData, { SGuildMember, SPlayerViewInfo } from "../roleModule/PlayerData";
 import { CfgMgr, StdGuildRole } from "../../manager/CfgMgr";
 import { ResMgr } from "../../manager/ResMgr";
-import { set } from "../../../../scripting/engine/cocos/core/utils/js-typed";
 import { EventMgr, Evt_GuildMenuShow } from "../../manager/EventMgr";
 
 export class GuildMemberItem extends Component {
@@ -21,7 +20,7 @@ export class GuildMemberItem extends Component {
     private std:StdGuildRole;
     private myStd:StdGuildRole;
     protected onLoad(): void {
-        this.head = this.node.getChildByName("HeadItem").getComponent(HeadItem);
+        this.head = this.node.getChildByName("HeadItem").addComponent(HeadItem);
         this.postIcon = this.node.getChildByName("postIcon").getComponent(Sprite);
         this.baseBg = this.node.getChildByName("baseBg");
         this.manageBtn = this.node.getChildByName("manageBtn").getComponent(Button);
@@ -36,7 +35,7 @@ export class GuildMemberItem extends Component {
         this.updateShow();
     }
     
-    SetData(data:any,) {
+    SetData(data:SGuildMember) {
         this.data = data;
         this.updateShow();
     }
@@ -46,8 +45,15 @@ export class GuildMemberItem extends Component {
     }
     private updateShow():void{
         if(!this.isInit || !this.data) return;
+        let viewInfo:SPlayerViewInfo = {player_id: this.data.player_id};
+        this.head.SetData(viewInfo);
         this.myStd = PlayerData.GetMyGuildLimit();
-        if(this.data.player_id != PlayerData.roleInfo.player_id && this.myStd && this.myStd.PermissionRoleAppointment > 0){
+        if(!this.myStd) return;
+        let myStdMember:SGuildMember = PlayerData.MyGuild.members[PlayerData.roleInfo.player_id];
+        if(!myStdMember) return;
+        this.std = CfgMgr.GetGuildRole(this.data.role);
+        let isShowManage:boolean = this.data.player_id != PlayerData.roleInfo.player_id && (this.myStd.PermissionRoleAppointment > this.std.PermissionRoleAppointment || this.myStd.PermissionKickPlayer > this.std.PermissionKickPlayer);
+        if(isShowManage){
             this.manageBtn.node.active = true;
             this.baseBg.getComponent(UITransform).width = 544;
             this.fightTitleLab.node.position = v3(-16,this.fightTitleLab.node.position.y);
@@ -60,9 +66,9 @@ export class GuildMemberItem extends Component {
         }
         this.nameLab.string = this.data.name || "";
         this.lvLab.string = `${this.data.level || 0}`;
-        this.fightLab.string = `${this.data.fight || 0}`;
-        this.notesLab.string = this.data.notes||"";
-        this.std = CfgMgr.GetGuildRole(this.data.role);
+        this.fightLab.string = `${this.data.battle_power || 0}`;
+        this.notesLab.string = this.data.message||"";
+        
         if(this.std.PostIcon && this.std.PostIcon != ""){
             this.postIcon.node.active = true;
             let url = path.join("sheets/guild", this.std.PostIcon, "spriteFrame");

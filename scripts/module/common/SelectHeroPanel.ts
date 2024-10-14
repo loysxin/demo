@@ -1,6 +1,6 @@
 import { Input, Label, Node, Sprite, SpriteFrame, Toggle, UIOpacity, } from "cc";
 import { Panel } from "../../GameRoot";
-import { SAssistRoleInfo, SDownlineInfo, SGetDownlines, SPlayerDataRole, SRoleAssistData } from "../roleModule/PlayerData";
+import PlayerData, { SAssistRoleInfo, SDownlineInfo, SGetDownlines, SPlayerDataRole, SRoleAssistData } from "../roleModule/PlayerData";
 import { Tips } from "../login/Tips";
 import { AutoScroller } from "../../utils/AutoScroller";
 import { Card, CardType } from "../home/panel/Card";
@@ -36,6 +36,7 @@ export class SelectHeroPanel extends Panel {
     private is_show_role_info: boolean;
     private selects = [];
     private selectsMer = [];
+    private is_jidi: boolean;
 
     protected onLoad() {
         this.CloseBy("mask");
@@ -67,14 +68,14 @@ export class SelectHeroPanel extends Panel {
     static SelectDefense(roles: SPlayerDataRole[], selects: SPlayerDataRole[], limit: number, callBack: Function) {
         this.Show(roles, selects, limit, callBack, CardType.defend);
     }
-    static SelectWork(roles: SPlayerDataRole[], selects: SPlayerDataRole[], limit: number, callBack: Function) {
-        this.Show(roles, selects, limit, callBack, CardType.Work);
+    static SelectWork(roles: SPlayerDataRole[], selects: SPlayerDataRole[], limit: number, callBack: Function, is_ji_di:boolean = false) {
+        this.Show(roles, selects, limit, callBack, CardType.Work, false, is_ji_di);
     }
     static SelectHelp(roles: SPlayerDataRole[], selects: SPlayerDataRole[], limit: number, callBack: Function) {
         this.Show(roles, selects, limit, callBack);
     }
 
-    flush(roles: SPlayerDataRole[], selects: SPlayerDataRole[], limit: number, callBack: Function, cardType: number, isShowFriend?: boolean) {
+    flush(roles: SPlayerDataRole[], selects: SPlayerDataRole[], limit: number, callBack: Function, cardType: number, isShowFriend?: boolean, is_ji_di?:boolean) {
         this.limit = limit;
         this.callback = callBack;
         this.datas = [];
@@ -84,6 +85,7 @@ export class SelectHeroPanel extends Panel {
         this.page = 1;
         this.type = cardType;
         this.isShowFriend = isShowFriend;
+        this.is_jidi = is_ji_di
         this.navBar.active = isShowFriend;
         this.is_show_role_info = false;
         this.my_lbl.string = "我的(0/" + this.limit + ")"
@@ -115,7 +117,7 @@ export class SelectHeroPanel extends Panel {
                         std = curStd;
                     }
                 })
-                let curRoles = CfgMgr.getFanyuOrtherRole(mainRole, std);
+                let curRoles = PlayerData.getFanyuOrtherRole(mainRole, std);
                 this.datas = [];
                 for (let role of curRoles) {
                     let data = {
@@ -159,7 +161,11 @@ export class SelectHeroPanel extends Panel {
     protected async updateItem(item: Node, data: { role: SPlayerDataRole, select: boolean, isend: boolean }, index) {
         let card = item.getComponent(Card);
         if (!card) card = item.addComponent(Card);
-        card.SetData(data, this.type, this.tab ? (this.tab == 1) : false);
+        if(this.is_jidi){
+            card.SetData(data, this.type, this.tab ? (this.tab == 1) : false, null, null, true);
+        }else{
+            card.SetData(data, this.type, this.tab ? (this.tab == 1) : false);
+        }
         if (this.isShowFriend) {
             this.checkPage(data);
         }
@@ -282,7 +288,7 @@ export class SelectHeroPanel extends Panel {
                             std = curStd;
                         }
                     })
-                    let curRoles = CfgMgr.getFanyuOrtherRole(mainRole, std);
+                    let curRoles = PlayerData.getFanyuOrtherRole(mainRole, std);
                     SelectHeroPanel.SelectMerge(curRoles, [mainRole], 2, this.callback);
                     this.selectsMer[0] = mainRole;
                     this.selectsMer[1] = null;
@@ -292,7 +298,7 @@ export class SelectHeroPanel extends Panel {
                         this.selectsMer[1] = this.datas[index].role;
                     }
                 } else {
-                    let curRoles = CfgMgr.getFanyuMainRole();
+                    let curRoles = PlayerData.getFanyuMainRole();
                     SelectHeroPanel.SelectMerge(curRoles, [], 2, this.callback);
                     this.selectsMer = []
                 }

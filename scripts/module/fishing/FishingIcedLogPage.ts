@@ -104,8 +104,20 @@ export class FishingIcedLogPage extends Component {
     protected updateTwentyItem(item: Node, data: SFishingFrozenLogData) {
         let phaseLab:Label = item.getChildByName("phaseLab").getComponent(Label);
         let lakeNameLab:Label = item.getChildByName("lakeNameLab").getComponent(Label);
-        let stdLake:StdLake = CfgMgr.GetStdLake(data.lake_id);
-        lakeNameLab.string = stdLake.Lakesname;
+        let nameStr:string = "";
+        let stdLake:StdLake;
+        if(!data.lake_ids || data.lake_ids.length < 1){
+            data.lake_ids = [];
+            data.lake_ids.push(data.lake_id);
+        } 
+        for (let index = 0; index < data.lake_ids.length; index++) {
+            stdLake = CfgMgr.GetStdLake(data.lake_ids[index]);
+            nameStr += stdLake.Lakesname;
+            if(index < data.lake_ids.length -1 ){
+                nameStr += " ";
+            }
+        }
+        lakeNameLab.string = nameStr;
         phaseLab.string = `${data.round}期`;
     }
 }

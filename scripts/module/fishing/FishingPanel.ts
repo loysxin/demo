@@ -1,6 +1,5 @@
-import { Node, Button, Label, Sprite, sp, game, Game, instantiate, v3, tween, Vec3, NodePool } from "cc";
+import { Node, Button, Label, Sprite, sp, game, Game, instantiate, v3, tween, Vec3, NodePool, path, SpriteFrame } from "cc";
 import { Panel } from "../../GameRoot";
-import { AutoScroller } from "../../utils/AutoScroller";
 import { CfgMgr, ConditionType, FishRoundState, OneOffRedPointId} from "../../manager/CfgMgr";
 import { FishingNoneCont } from "./FishingNoneCont";
 import { FishingLakeCont } from "./FishingLakeCont";
@@ -10,7 +9,7 @@ import { FishingResultCont } from "./FishingResultCont";
 import { MsgTypeSend } from "../../MsgType";
 import { Session } from "../../net/Session";
 import { EventMgr, Evt_Change_Scene_Bgm, Evt_FishDataUpdate, Evt_Hide_Scene, Evt_Item_Change, Evt_Show_Scene } from "../../manager/EventMgr";
-import PlayerData, { SFishingRoundInfo, SFishingSettlementData, SSimpleData } from "../roleModule/PlayerData";
+import PlayerData, { SFishingRoundInfo, SFishingSettlementData, SPlayerViewInfo } from "../roleModule/PlayerData";
 import { FishingFeedBuyPanel } from "./FishingFeedBuyPanel";
 import { formatNumber, randomf, randomI } from "../../utils/Utils";
 import { FishingLogPanel } from "./FishingLogPanel";
@@ -19,12 +18,13 @@ import { FishingLuckyPoolPanel } from "./FishingLuckyPoolPanel";
 import { AdaptBgTop } from "../common/BaseUI";
 import { BezierTween3 } from "../../utils/Bezier";
 import { FishingTipsPanel } from "./FishingTipsPanel";
-import { BeforeGameUtils } from "../../utils/BeforeGameUtils";
 import { AudioMgr, FishSoundId, FishSoundInfo, SceneBgmId } from "../../manager/AudioMgr";
 import { HeadItem } from "../common/HeadItem";
+import { ResMgr } from "../../manager/ResMgr";
 
 export class FishingPanel extends Panel {
     protected prefab: string = "prefabs/panel/fishing/FishingPanel";
+    private topBg:Sprite;
     private head:HeadItem;
     private feedValLab:Label;
     private addBtn:Button;
@@ -51,6 +51,7 @@ export class FishingPanel extends Panel {
     private curFeedVal:number;
     
     protected onLoad(): void {
+        this.topBg = this.find("topCont/topBg", Sprite); 
         this.head = this.find('topCont/HeadItem').addComponent(HeadItem);
         this.feedValLab = this.find("topCont/feedCont/feedValLab", Label);
         this.addBtn = this.find("topCont/feedCont/addBtn", Button);
@@ -100,11 +101,11 @@ export class FishingPanel extends Panel {
         this.icedModel.node.active = false;
         this.isInit = true;
         this.curRoundState = null;
-        let data:SSimpleData = {
+        let data:SPlayerViewInfo = {
             player_id:PlayerData.roleInfo.player_id,
             name:PlayerData.roleInfo.name,
-            weChatNum:PlayerData.roleInfo.weChatNum,
-            qqNum:PlayerData.roleInfo.qqNum,
+            _weChatNumber:PlayerData.roleInfo.weChatNum,
+            _qqNumber:PlayerData.roleInfo.qqNum,
         };
         this.head.SetData(data);
         this.initSendData();
@@ -157,6 +158,7 @@ export class FishingPanel extends Panel {
     }
     private updateRoundState(isNewRound:boolean = false, isInit:boolean = false):void{
         let state:FishRoundState = PlayerData.GetFishRoundState;
+        
         if(!isNewRound && this.curRoundState == state) return;
         this.icedModel.node.active = false;  
         this.unschedule(this.showRod);
@@ -177,22 +179,14 @@ export class FishingPanel extends Panel {
                 if(this.isInit){
                     this.showRod();
                 }else{
-                    this.icedModel.node.active = true;
+                    
                     this.selectLakeCont.UpdateIcedTips("暴风雪快来了");
                     this.scheduleOnce(()=>{
                         this.selectLakeCont.UpdateIcedTips("暴风雪来了");
                     }, 2);
-                    this.icedModel.setAnimation(0, "warning", false);
                     this.scheduleOnce(this.showRod, 9);
-                    this.icedModel.setCompleteListener(() => {
-                        if(this.icedModel.animation == "blizzard"){
-                            this.icedModel.node.active = false;
-                        }else{
-                            this.selectLakeCont.PlayIcedEffect(true);
-                            this.icedModel.setAnimation(0, "blizzard", false);
-                        }
-                        
-                    });
+                    this.playIcedEffect();
+                    
                 }
                 
                 break;
@@ -257,6 +251,25 @@ export class FishingPanel extends Panel {
                 break;
         }
     }
+    private async playIcedEffect():Promise<void>{
+        this.icedModel.node.active = true;
+        this.icedModel.skeletonData = null;
+        let icedEfeectName:string = "mg_icewarning";
+        if(PlayerData.CurFishRoundInfo && PlayerData.CurFishRoundInfo.kill_type > 1){
+            icedEfeectName = "mg_icewarning_hell";
+        }
+        this.icedModel.skeletonData = await ResMgr.LoadResAbSub(path.join("spine/effect", icedEfeectName, "mg_icewarning"), sp.SkeletonData);
+        this.icedModel.setAnimation(0, "warning", false);
+        this.icedModel.setCompleteListener(() => {
+            if(this.icedModel.animation == "blizzard"){
+                this.icedModel.node.active = false;
+            }else{
+                this.selectLakeCont.PlayIcedEffect(true);
+                this.icedModel.setAnimation(0, "blizzard", false);
+            }
+            
+        });
+    }
     private showRod():void{
         if(this.curRoundState != FishRoundState.LiftRod)return;
         this.lakeCont.onShow(FishRoundState.LiftRod);
@@ -305,6 +318,14 @@ export class FishingPanel extends Panel {
     }
     private onFishDataUpdate():void{
         if(!this.node.activeInHierarchy) return;
+        let topUrl:string = "generalTopBg";
+        if(PlayerData.CurFishRoundInfo && PlayerData.CurFishRoundInfo.kill_type > 1){
+            topUrl = "hellTopBg";
+        }
+        topUrl = path.join("sheets/fishing", topUrl, "spriteFrame");
+        ResMgr.LoadResAbSub(topUrl, SpriteFrame, res => {
+            this.topBg.spriteFrame = res;
+        });
         let newRoundId:number = 0;
         let newFeedVal:number = PlayerData.fishData && PlayerData.fishData.player ? PlayerData.fishData.player.round_cost : 0;
         if(newFeedVal > 0){
